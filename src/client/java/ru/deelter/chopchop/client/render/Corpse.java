@@ -2,33 +2,46 @@ package ru.deelter.chopchop.client.render;
 
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
+import ru.deelter.chopchop.client.Corpses;
 
 import java.util.List;
 
 /**
- * How a model is posed as a dead body, on top of its own animation. Called right after the model was posed for its
- * draw; the next draw poses it afresh, so nothing stays on the model.
+ * How a model is posed as a dead body, on top of its own animation: arms let down along the body (a zombie's too, on
+ * its back they would stick up), then every joint as limp as {@link Corpses} has it swing. Called right after the
+ * model was posed for its draw, for the body and its armour and layers alike; the next draw poses it afresh.
  */
 public final class Corpse {
-	private static final String[] ARMS = {"right_arm", "left_arm"};
-	/**
-	 * arms lie along the body, a little away from it
-	 */
-	private static final float SPREAD = 0.08F;
+	private static final int OFFSET = 6;
 
 	private Corpse() {
 	}
 
-	public static void lowerArms(Model<?> model) {
+	/**
+	 * @param corpse the corpse values of the render state, joints from index 6
+	 */
+	public static void pose(Model<?> model, float[] corpse) {
 		Bindings.ensure(model);
-		for (int i = 0; i < ARMS.length; i++) {
-			List<ModelPart> path = Bindings.path(model, ARMS[i]);
-			if (path == null || path.isEmpty()) continue;
-			ModelPart arm = path.getLast();
-			arm.xRot = 0;
-			arm.yRot = 0;
-			// the model's right arm is on its -x side: away from the body is +z rotation for it, -z for the left
-			arm.zRot = i == 0 ? SPREAD : -SPREAD;
-		}
+		float[] j = new float[Corpses.JOINTS];
+		if (corpse.length >= OFFSET + Corpses.JOINTS) System.arraycopy(corpse, OFFSET, j, 0, Corpses.JOINTS);
+		set(model, "right_arm", j[Corpses.RIGHT_ARM_X], 0, 0.08F + j[Corpses.RIGHT_ARM_Z]);
+		set(model, "left_arm", j[Corpses.LEFT_ARM_X], 0, -0.08F + j[Corpses.LEFT_ARM_Z]);
+		set(model, "right_leg", j[Corpses.RIGHT_LEG_X], 0, j[Corpses.RIGHT_LEG_Z]);
+		set(model, "left_leg", j[Corpses.LEFT_LEG_X], 0, j[Corpses.LEFT_LEG_Z]);
+		// four legs: the front pair like arms hanging, the hind pair like legs
+		set(model, "right_front_leg", j[Corpses.RIGHT_ARM_X] * 0.6F, 0, j[Corpses.RIGHT_ARM_Z] * 0.5F);
+		set(model, "left_front_leg", j[Corpses.LEFT_ARM_X] * 0.6F, 0, j[Corpses.LEFT_ARM_Z] * 0.5F);
+		set(model, "right_hind_leg", j[Corpses.RIGHT_LEG_X], 0, j[Corpses.RIGHT_LEG_Z]);
+		set(model, "left_hind_leg", j[Corpses.LEFT_LEG_X], 0, j[Corpses.LEFT_LEG_Z]);
+		set(model, "head", j[Corpses.HEAD_PITCH], j[Corpses.HEAD_YAW], 0);
+	}
+
+	private static void set(Model<?> model, String name, float x, float y, float z) {
+		List<ModelPart> path = Bindings.path(model, name);
+		if (path == null || path.isEmpty()) return;
+		ModelPart part = path.getLast();
+		part.xRot = x;
+		part.yRot = y;
+		part.zRot = z;
 	}
 }

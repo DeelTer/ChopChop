@@ -38,6 +38,12 @@ public final class Corpses {
 	 */
 	public static final int SINK_TICKS = 40;
 	private static final float RIGHT_ANGLE = (float) (Math.PI / 2);
+	public static final int HEAD_YAW = 0, HEAD_PITCH = 1, RIGHT_ARM_X = 2, RIGHT_ARM_Z = 3, LEFT_ARM_X = 4, LEFT_ARM_Z = 5,
+			RIGHT_LEG_X = 6, RIGHT_LEG_Z = 7, LEFT_LEG_X = 8, LEFT_LEG_Z = 9, JOINTS = 10;
+	/**
+	 * how stiff the joints are and how fast they calm down
+	 */
+	private static final float JOINT_SPRING = 0.18F, JOINT_DAMPING = 0.22F, JOINT_LIMIT = 1.6F;
 	/**
 	 * ids of player copies: far below anything a server hands out
 	 */
@@ -89,6 +95,12 @@ public final class Corpses {
 		 */
 		int sinkLeft = -1;
 		boolean asleep;
+		/**
+		 * The joints of a limp body, each an angle and how fast it turns: springs that go slack towards a pose of their
+		 * own (arms flung out, a leg bent, the head turned away), shaken by every knock. See {@link #JOINTS}
+		 */
+		final float[] joint = new float[JOINTS], lastJoint = new float[JOINTS], jointSpeed = new float[JOINTS], slack = new float[JOINTS];
+		final Random jolts;
 
 		Body(Protocol.Message.Corpse message, int entityId, Player copy, int sourceId) {
 			this.entityId = entityId;
@@ -102,6 +114,25 @@ public final class Corpses {
 			this.roll = (float) ((random.nextDouble() - 0.5) * 0.6);
 			this.ticks = Math.max(SINK_TICKS + 20, message.ticks());
 			this.speed = 0.02F + message.strength() * 0.06F;
+			// where each joint goes slack: the same on every client, from the seed
+			slack[HEAD_YAW] = (float) ((random.nextDouble() - 0.5) * 1.6);
+			slack[HEAD_PITCH] = (float) ((random.nextDouble() - 0.3) * 0.6);
+			slack[RIGHT_ARM_X] = (float) ((random.nextDouble() - 0.5) * 1.2);
+			slack[RIGHT_ARM_Z] = (float) (0.15 + random.nextDouble() * 0.7);
+			slack[LEFT_ARM_X] = (float) ((random.nextDouble() - 0.5) * 1.2);
+			slack[LEFT_ARM_Z] = (float) -(0.15 + random.nextDouble() * 0.7);
+			slack[RIGHT_LEG_X] = (float) ((random.nextDouble() - 0.5) * 0.7);
+			slack[RIGHT_LEG_Z] = (float) (0.03 + random.nextDouble() * 0.3);
+			slack[LEFT_LEG_X] = (float) ((random.nextDouble() - 0.5) * 0.7);
+			slack[LEFT_LEG_Z] = (float) -(0.03 + random.nextDouble() * 0.3);
+			this.jolts = new Random(message.seed() * 31L + 7);
+		}
+
+		/**
+		 * The joints now, interpolated: radians, see {@link #JOINTS}.
+		 */
+		public float joint(int index, float partial) {
+			return lastJoint[index] + (joint[index] - lastJoint[index]) * partial;
 		}
 
 		public float angle(float partial) {
@@ -317,13 +348,19 @@ public final class Corpses {
 				}
 				if (body.angle >= RIGHT_ANGLE) {
 					body.angle = RIGHT_ANGLE;
+					// it hits the ground: arms and legs and head fly about
+					jolt(body, Math.abs(body.speed) * 4);
 					body.speed = -body.speed * 0.22F;
 					if (Math.abs(body.speed) < 0.03F) body.landed = true;
 				}
 			}
+			joints(body);
 			++body.age;
 			// watched every tick the first seconds, then it sleeps and looks at the ground under it twice a second
-			if (!body.asleep || body.age % 10 == 0) move(level, entity, body);
+			if (!body.asleep || body.age % 10 == 0) {
+				move(level, entity, body);
+				if (body.landed) unstick(level, entity, body);
+			}
 			Vec3 at = entity.position().add(body.offset[1]);
 			if (body.sinkLeft >= 0) {
 				if (--body.sinkLeft <= 0) done.add(body.entityId);
@@ -380,6 +417,7 @@ public final class Corpses {
 		// lands on (or is lifted onto) the highest ground under it: a carpet, a slab, a step count as ground
 		double under = ground(level, nextFeet, body);
 		if (!Double.isNaN(under) && nextFeet.y <= under) {
+			if (v.y < -0.1) jolt(body, (float) -v.y * 2);
 			next = new Vec3(next.x, under - entity.getY(), next.z);
 			v = v.y < -0.25 ? new Vec3(v.x * 0.5, -v.y * 0.25, v.z * 0.5) : new Vec3(v.x * 0.6, 0, v.z * 0.6);
 		}
@@ -443,21 +481,76 @@ public final class Corpses {
 			// it turns over in the air and comes down again
 			body.landed = false;
 			body.speed = (float) (0.1 + power * 0.3);
+			jolt(body, (float) (0.5 + power));
 		}
 	}
 
 	/**
-	 * Whether the body, tipped this far over its feet, is clear of blocks along its length: a few points from the hips
-	 * to the top of the head, a little above the ground it lies on.
+	 * The joints go slack towards their pose as the body comes to lie, and swing after a knock.
+	 */
+	private static void joints(Body body) {
+		float lying = (float) Math.sin(body.angle);
+		for (int i = 0; i < JOINTS; i++) {
+			body.lastJoint[i] = body.joint[i];
+			float target = body.slack[i] * lying;
+			body.jointSpeed[i] += (target - body.joint[i]) * JOINT_SPRING - body.jointSpeed[i] * JOINT_DAMPING;
+			body.joint[i] = Math.clamp(body.joint[i] + body.jointSpeed[i], -JOINT_LIMIT, JOINT_LIMIT);
+		}
+	}
+
+	/**
+	 * A knock: every joint gets a push of its own, up to {@code power} radians a tick.
+	 */
+	private static void jolt(Body body, float power) {
+		float p = Math.min(0.6F, power);
+		if (p < 0.02F) return;
+		for (int i = 0; i < JOINTS; i++) body.jointSpeed[i] += (body.jolts.nextFloat() - 0.5F) * 2 * p;
+		body.asleep = false;
+	}
+
+	/**
+	 * Whether the body, tipped this far over its feet, is clear of blocks: points along its length from the hips to
+	 * the top of the head, down its middle and at both its sides, a little above the ground it lies on.
 	 */
 	private static boolean clear(ClientLevel level, Vec3 feet, Body body, float angle) {
 		double sin = Math.sin(angle), cos = Math.cos(angle);
+		// across the body, level: its shoulders and hips stick out to the sides of the line of the fall
+		double side = body.width * 0.4;
+		double sx = -body.dz * side, sz = body.dx * side;
 		for (double t = 0.3; t <= 1.0001; t += 0.175) {
 			double along = body.height * t;
 			Vec3 point = feet.add(body.dx * along * sin, along * cos + 0.12, body.dz * along * sin);
 			if (blockedAbove(level, point, feet.y)) return false;
+			if (t < 0.95 && (blockedAbove(level, point.add(sx, 0, sz), feet.y) || blockedAbove(level, point.add(-sx, 0, -sz), feet.y))) return false;
 		}
 		return true;
+	}
+
+	/**
+	 * A body found inside blocks (a block placed into it, a fall into a gap): pushed out to the nearest place within
+	 * half a block where it fits, or raised until it stands clear enough to lean.
+	 */
+	private static void unstick(ClientLevel level, Entity entity, Body body) {
+		Vec3 feet = entity.position().add(body.offset[1]);
+		if (clear(level, feet, body, body.angle)) return;
+		double[] steps = {0.15, 0.3, 0.5};
+		for (double step : steps) {
+			for (int k = 0; k < 8; k++) {
+				double a = k * Math.PI / 4;
+				Vec3 moved = body.offset[1].add(Math.cos(a) * step, 0, Math.sin(a) * step);
+				if (clear(level, entity.position().add(moved), body, body.angle)) {
+					body.offset[1] = moved;
+					return;
+				}
+			}
+		}
+		// nowhere flat: it leans up where it is until it fits
+		for (float angle = body.angle; angle > 0; angle -= 0.15F) {
+			if (clear(level, feet, body, angle)) {
+				body.angle = body.lastAngle = angle;
+				return;
+			}
+		}
 	}
 
 	/**

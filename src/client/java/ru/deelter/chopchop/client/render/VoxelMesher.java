@@ -216,6 +216,75 @@ public final class VoxelMesher {
 	/**
 	 * A bone standing out of the cut at row {@code cut}, towards +y (out of a stump) or -y (out of a fallen piece).
 	 */
+	/**
+	 * The real bone of the skeleton inside, sticking out of a stump: the skeleton's own column of the limb, its
+	 * texture and all, a few pixels past the cut. For bodies with a skeleton inside; others get {@link #bone}.
+	 *
+	 * @param down it sticks out towards +y (the stump on the body), else towards -y (the piece that came off)
+	 * @return false if the skeleton has no bone at the cut, then nothing was drawn
+	 */
+	public static boolean skeletonStump(Grid g, int cut, boolean down, ru.deelter.chopchop.core.profile.BodyPart.Skeleton skeleton,
+										SkeletonTexture texture, PoseStack.Pose pose, Sink sink) {
+		float[] box = skeleton.box();
+		if (box == null || box.length != 6 || skeleton.cube() == null || skeleton.uv() == null) return false;
+		float cy = g.oy + g.sy * cut;
+		if (cy < box[1] || cy > box[4]) return false;
+		float sign = down ? 1 : -1;
+		// a pixel stays inside the flesh, then it sticks out
+		float from = cy - sign, to = cy + sign * STUMP_PIXELS;
+		float y0 = Math.min(from, to), y1 = Math.max(from, to);
+		Matrix4f matrix = pose.pose();
+		Vector3f p = new Vector3f(), n = new Vector3f();
+		float x0 = box[0], x1 = box[3], z0 = box[2], z1 = box[5];
+		for (float y = y0; y < y1 - 1e-3; y += 1) {
+			float ya = y, yb = Math.min(y1, y + 1), yc = (ya + yb) / 2;
+			for (float x = x0; x < x1 - 1e-3; x += 1) {
+				float xb = Math.min(x1, x + 1), xc = (x + xb) / 2;
+				quad(matrix, pose, p, n, sink, skeleton, texture, new int[]{0, 0, -1}, xc, yc, z0,
+						new float[][]{{x, ya, z0}, {xb, ya, z0}, {xb, yb, z0}, {x, yb, z0}});
+				quad(matrix, pose, p, n, sink, skeleton, texture, new int[]{0, 0, 1}, xc, yc, z1,
+						new float[][]{{xb, ya, z1}, {x, ya, z1}, {x, yb, z1}, {xb, yb, z1}});
+			}
+			for (float z = z0; z < z1 - 1e-3; z += 1) {
+				float zb = Math.min(z1, z + 1), zc = (z + zb) / 2;
+				quad(matrix, pose, p, n, sink, skeleton, texture, new int[]{-1, 0, 0}, x0, yc, zc,
+						new float[][]{{x0, ya, zb}, {x0, ya, z}, {x0, yb, z}, {x0, yb, zb}});
+				quad(matrix, pose, p, n, sink, skeleton, texture, new int[]{1, 0, 0}, x1, yc, zc,
+						new float[][]{{x1, ya, z}, {x1, ya, zb}, {x1, yb, zb}, {x1, yb, z}});
+			}
+		}
+		// the end of it: where the bone broke
+		float end = down ? y1 : y0;
+		int[] normal = {0, down ? 1 : -1, 0};
+		for (float x = x0; x < x1 - 1e-3; x += 1) {
+			for (float z = z0; z < z1 - 1e-3; z += 1) {
+				float xb = Math.min(x1, x + 1), zb = Math.min(z1, z + 1);
+				quad(matrix, pose, p, n, sink, skeleton, texture, normal, (x + xb) / 2, end, (z + zb) / 2,
+						down ? new float[][]{{x, end, z}, {xb, end, z}, {xb, end, zb}, {x, end, zb}}
+								: new float[][]{{x, end, zb}, {xb, end, zb}, {xb, end, z}, {x, end, z}});
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * how far a bone sticks out of a stump, pixels
+	 */
+	private static final float STUMP_PIXELS = 2.5F;
+
+	private static void quad(Matrix4f matrix, PoseStack.Pose pose, Vector3f p, Vector3f n, Sink sink,
+							 ru.deelter.chopchop.core.profile.BodyPart.Skeleton skeleton, SkeletonTexture texture, int[] normal,
+							 float px, float py, float pz, float[][] corners) {
+		int[] texel = skeleton.texel(px, py, pz, normal);
+		float[] uv = texture.uv(texel[0], texel[1]);
+		float[][] t = {{uv[0], uv[3]}, {uv[2], uv[3]}, {uv[2], uv[1]}, {uv[0], uv[1]}};
+		pose.transformNormal(normal[0], normal[1], normal[2], n);
+		for (int k = 0; k < 4; k++) {
+			matrix.transformPosition(corners[k][0] / 16F, corners[k][1] / 16F, corners[k][2] / 16F, p);
+			sink.vertex(p.x, p.y, p.z, t[k][0], t[k][1], n.x, n.y, n.z);
+		}
+	}
+
 	public static void bone(Grid g, int cut, float scale, boolean down, PoseStack.Pose pose, Sink sink) {
 		List<float[]> quads = BoneMesh.quads();
 		if (quads.isEmpty()) return;

@@ -152,7 +152,10 @@ public final class GoreRender {
 				VoxelMesher.neck(grid, grid.gy(), false, pose, inside);
 				if (bone) VoxelMesher.bone(grid, grid.gy(), part.getBoneScale(), false, pose, BONE_QUADS);
 			} else if (partState.severed() && bone) {
-				VoxelMesher.bone(grid, partState.getSeveredAt(), part.getBoneScale(), true, pose, BONE_QUADS);
+				// a body with a skeleton inside shows its own bone in the stump, the others a cartoon one
+				boolean real = skeletonTexture != null && part.getSkeleton() != null
+						&& VoxelMesher.skeletonStump(grid, partState.getSeveredAt(), true, part.getSkeleton(), skeletonTexture, pose, SKELETON_QUADS);
+				if (!real) VoxelMesher.bone(grid, partState.getSeveredAt(), part.getBoneScale(), true, pose, BONE_QUADS);
 			}
 		}
 		return true;

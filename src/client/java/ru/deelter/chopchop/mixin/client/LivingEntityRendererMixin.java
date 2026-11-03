@@ -53,8 +53,16 @@ public abstract class LivingEntityRendererMixin {
 		float cos = (float) Math.cos(turn), sin = (float) Math.sin(turn);
 		float lx = body.dx() * cos - body.dz() * sin;
 		float lz = body.dx() * sin + body.dz() * cos;
-		((ChopRenderState) state).chopchop$setCorpse(new float[]{lx, lz, body.angle(partialTicks), body.roll(), body.sink(partialTicks),
-				body.width()});
+		float[] corpse = new float[6 + Corpses.JOINTS];
+		corpse[0] = lx;
+		corpse[1] = lz;
+		corpse[2] = body.angle(partialTicks);
+		corpse[3] = body.roll();
+		corpse[4] = body.sink(partialTicks);
+		corpse[5] = body.width();
+		// the limp joints, for the model (Corpse.pose)
+		for (int i = 0; i < Corpses.JOINTS; i++) corpse[6 + i] = body.joint(i, partialTicks);
+		((ChopRenderState) state).chopchop$setCorpse(corpse);
 	}
 
 	/**

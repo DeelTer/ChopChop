@@ -429,7 +429,14 @@ public final class Debris {
 								VoxelMesher.inside(grid, c.mask, material, pose, nowhere, c.part.getSkeleton(), skeleton,
 										Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));
 					}
-					if (meat && bones) {
+					// the piece of a body with a skeleton inside: its own bone sticks out where it broke
+					boolean real = meat && bones && c.cut > 0 && skeleton != null && c.part.getSkeleton() != null;
+					if (real) {
+						collector.submitCustomGeometry(stack, translucent ? skeleton.translucentType() : skeleton.type(), (pose, consumer) ->
+								VoxelMesher.skeletonStump(grid, c.cut, false, c.part.getSkeleton(), skeleton,
+										pose, Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));
+					}
+					if (meat && bones && !real) {
 						int row = c.cut == 0 ? grid.gy() : c.cut;
 						collector.submitCustomGeometry(stack, translucent ? RenderTypes.entityTranslucent(GoreRender.BONE) : GoreRender.boneType(),
 								(pose, consumer) -> VoxelMesher.bone(grid, row, c.part.getBoneScale(), c.cut == 0, pose,

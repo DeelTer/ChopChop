@@ -34,7 +34,7 @@ public abstract class ModelFeatureRendererMixin {
 			if (submit.state() instanceof ChopRenderState state) {
 				// a dead body lets its arms down, a zombie's too: on its back they would stick up, face down into the ground.
 				// Every model of it (the body, armour, layers) is posed the same way, they all go through here
-				if (state.chopchop$corpse() != null) Corpse.lowerArms(model);
+				if (state.chopchop$corpse() != null) Corpse.pose(model, state.chopchop$corpse());
 				if (model == state.chopchop$mainModel()) {
 					// the pose as drawn, for the crosshair (ModelPick): a swinging arm is hit where it is
 					AnimatedPose.capture(model, state.chopchop$entityId(),
