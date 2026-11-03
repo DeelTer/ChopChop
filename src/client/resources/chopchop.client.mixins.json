@@ -6,6 +6,7 @@
 	"client": [
 		"AvatarRendererMixin",
 		"CameraMixin",
+		"ClientLevelMixin",
 		"CubeMixin",
 		"EntityRenderStateMixin",
 		"ItemInHandLayerMixin",
@@ -13,8 +14,10 @@
 		"FirstPersonItemsMixin",
 		"GuiMixin",
 		"HeadlessHeadLayerMixin",
+		"LivingEntityEventMixin",
 		"LivingEntityRendererMixin",
 		"ModelFeatureRendererMixin",
+		"ModelInteractionsHitMixin",
 		"ModelPartAccessor",
 		"RenderTypeFeatureRendererInvoker"
 	],

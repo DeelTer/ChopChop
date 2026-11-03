@@ -57,6 +57,41 @@ final class Consequences {
 			int ticks = (int) Math.round(seconds * 20);
 			HEADLESS.put(entity.getUUID(), new Headless(entity, source, new int[]{Math.max(1, ticks)}));
 		}
+		if (entity instanceof Mob mob && rules.isDisarmMobs()) disarm(mob, state, rules);
+	}
+
+	/**
+	 * A hand that is gone holds nothing: a skeleton without its bow arm has no bow to shoot.
+	 */
+	static void disarm(Mob mob, WoundState state, WoundRules rules) {
+		boolean rightMain = mob.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT;
+		drop(mob, net.minecraft.world.entity.EquipmentSlot.MAINHAND, state.handless(rightMain ? "right" : "left"), rules);
+		drop(mob, net.minecraft.world.entity.EquipmentSlot.OFFHAND, state.handless(rightMain ? "left" : "right"), rules);
+		if (state.armless()) mob.setTarget(null);
+	}
+
+	private static void drop(Mob mob, net.minecraft.world.entity.EquipmentSlot slot, boolean gone, WoundRules rules) {
+		if (!gone) return;
+		net.minecraft.world.item.ItemStack stack = mob.getItemBySlot(slot);
+		if (stack.isEmpty()) return;
+		mob.setItemSlot(slot, net.minecraft.world.item.ItemStack.EMPTY);
+		if (rules.isDisarmDrops() && mob.level() instanceof ServerLevel level) mob.spawnAtLocation(level, stack);
+	}
+
+	/**
+	 * A mob without the hand in question, see {@code MobArmsMixin}.
+	 */
+	static boolean noHands(Mob mob) {
+		WoundState state = ChopServer.wounds(mob);
+		WoundRules rules = ChopServer.rules();
+		return state != null && rules != null && rules.isDisarmMobs() && state.armless();
+	}
+
+	static boolean noMainHand(Mob mob) {
+		WoundState state = ChopServer.wounds(mob);
+		WoundRules rules = ChopServer.rules();
+		if (state == null || rules == null || !rules.isDisarmMobs()) return false;
+		return state.handless(mob.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? "right" : "left");
 	}
 
 	static void tick(MinecraftServer server) {

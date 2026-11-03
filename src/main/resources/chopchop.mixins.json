@@ -6,6 +6,7 @@
 	"mixins": [
 		"LivingEntityHurtMixin",
 		"MobAiMixin",
+		"MobArmsMixin",
 		"PlayerPoseMixin"
 	],
 	"injectors": {

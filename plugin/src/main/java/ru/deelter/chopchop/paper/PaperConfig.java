@@ -53,6 +53,18 @@ final class PaperConfig {
 		rules.setKillCamThreatRadius(config.getDouble("kill-cam.threat-radius", rules.getKillCamThreatRadius()));
 		rules.setKillCamFreezeSeconds(config.getDouble("kill-cam.freeze-seconds", rules.getKillCamFreezeSeconds()));
 		rules.setPersistPlayers(config.getBoolean("persist-players", rules.isPersistPlayers()));
+		rules.setAxeExtraDepth(config.getInt("wounds.axe-extra-depth", rules.getAxeExtraDepth()));
+		rules.setSeverChancePerDamage(config.getDouble("severing.chance-per-damage", rules.getSeverChancePerDamage()));
+		rules.setSeverHeavyBonus(config.getDouble("severing.heavy-bonus", rules.getSeverHeavyBonus()));
+		rules.setLethalSeverChance(config.getDouble("severing.lethal-chance", rules.getLethalSeverChance()));
+		rules.setLethalHeadChance(config.getDouble("severing.lethal-head-chance", rules.getLethalHeadChance()));
+		rules.setHeadHitDamage(config.getDouble("severing.head-hit-damage", rules.getHeadHitDamage()));
+		rules.setExplosionWoundDepth(config.getInt("explosions.wound-depth", rules.getExplosionWoundDepth()));
+		rules.setExplosionWoundScale(config.getDouble("explosions.wound-scale", rules.getExplosionWoundScale()));
+		rules.setExplosionCarvedShare(config.getDouble("explosions.max-carved-share", rules.getExplosionCarvedShare()));
+		rules.setDisarmMobs(config.getBoolean("disarm.mobs", rules.isDisarmMobs()));
+		rules.setDisarmDrops(config.getBoolean("disarm.drops", rules.isDisarmDrops()));
+		rules.setCorpseSeconds(config.getDouble("corpse-seconds", rules.getCorpseSeconds()));
 		ConfigurationSection weapons = config.getConfigurationSection("weapons");
 		if (weapons != null) {
 			Map<WeaponKind, WoundRules.WeaponRule> map = new EnumMap<>(WeaponKind.class);

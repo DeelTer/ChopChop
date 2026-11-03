@@ -39,7 +39,7 @@ public abstract class ModelFeatureRendererMixin {
 				Bindings.ensure(model);
 				if (model == state.chopchop$mainModel()) {
 					var entityState = (net.minecraft.client.renderer.entity.state.EntityRenderState) submit.state();
-					Debris.capture(model, wounds, state.chopchop$entityId(), submit.pose(), type, state.chopchop$camera(),
+					Debris.capture(model, wounds, state.chopchop$entityId(), submit.pose(), type, state.chopchop$texture(), state.chopchop$camera(),
 							new net.minecraft.world.phys.Vec3(entityState.x, entityState.y, entityState.z));
 					GoreRender.begin(wounds, GoreRender.Role.MAIN, gore, far);
 				} else {

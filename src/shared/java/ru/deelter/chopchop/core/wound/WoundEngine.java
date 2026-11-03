@@ -18,6 +18,15 @@ public final class WoundEngine {
 	 * @param damage health the target actually lost, after armor
 	 */
 	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, WoundRules rules, RandomGenerator random) {
+		return apply(state, hit, weapon, damage, false, rules, random);
+	}
+
+	/**
+	 * @param damage health the target lost; for the blow that killed it, the damage of the blow
+	 * @param lethal this blow killed the body: a sword or an axe likely takes what it hits
+	 */
+	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, WoundRules rules,
+								RandomGenerator random) {
 		PartState part = state.part(hit.part());
 		BodyPart def = part.getPart();
 		WoundRules.WeaponRule weaponRule = rules.weapon(weapon);
@@ -29,11 +38,11 @@ public final class WoundEngine {
 				// a blade leaves a scar across the body, the way it swung
 				double length = Math.min(rules.getSlashLengthMax(),
 						rules.getSlashLengthBase() + rules.getSlashLengthPerDamage() * damage) * weaponRule.woundSize();
-				carved = carve(part, hit.x(), hit.y(), hit.z(), hit.slash(), length / 2, rules.getSlashWidth(), rules);
+				carved = carve(part, hit, hit.slash(), length / 2, rules.getSlashWidth(), depthOf(weapon, rules), rules.getMaxCarvedShare());
 			} else {
 				double radius = Math.min(rules.getWoundRadiusMax(),
 						rules.getWoundRadiusBase() + rules.getWoundRadiusPerDamage() * damage) * weaponRule.woundSize();
-				carved = carve(part, hit.x(), hit.y(), hit.z(), null, 0, radius, rules);
+				carved = carve(part, hit, null, 0, radius, depthOf(weapon, rules), rules.getMaxCarvedShare());
 			}
 		}
 
@@ -43,15 +52,23 @@ public final class WoundEngine {
 			if (segment >= 0) {
 				BodyPart.Segment seg = def.getSegments().get(segment);
 				boolean off;
+				double over = Math.max(0, damage - rules.getMinSeverDamage());
 				if (seg.getHits() > 0) {
-					// counted chops: sure and the same every time, made for a head
+					// counted chops: sure and the same every time, made for a head; a heavy blow counts for more
 					// a body lying without legs loses its head quicker
 					int needed = state.legless() && rules.getLeglessHeadHits() > 0 ? Math.min(seg.getHits(), rules.getLeglessHeadHits()) : seg.getHits();
-					off = part.addSegmentHit(segment) >= needed;
+					int count = rules.getHeadHitDamage() > 0 ? 1 + (int) (damage / rules.getHeadHitDamage()) : 1;
+					int total = 0;
+					for (int i = 0; i < count; i++) total = part.addSegmentHit(segment);
+					off = total >= needed || lethal && random.nextDouble() < rules.getLethalHeadChance();
 				} else {
-					float total = part.addSegmentDamage(segment, (float) (damage * weaponRule.sever()));
+					float worn = (float) (damage * weaponRule.sever() * (1 + over * rules.getSeverHeavyBonus()));
+					float total = part.addSegmentDamage(segment, worn);
+					double chance = Math.min(0.95, rules.getSeverChance() + over * rules.getSeverChancePerDamage());
 					off = damage >= rules.getMinSeverDamage() && total >= seg.getDurability() * rules.getDurabilityMultiplier()
-							&& random.nextDouble() < rules.getSeverChance();
+							&& random.nextDouble() < chance;
+					// the killing blow does not wait for the limb to wear through
+					if (!off && lethal) off = random.nextDouble() < Math.min(0.95, rules.getLethalSeverChance() * Math.min(1.5, weaponRule.sever()));
 				}
 				if (off && part.sever(seg.getCut())) severedAt = seg.getCut();
 			}
@@ -74,15 +91,39 @@ public final class WoundEngine {
 	}
 
 	/**
+	 * How deep a weapon may dig, voxels under the original surface.
+	 */
+	static int depthOf(WeaponKind weapon, WoundRules rules) {
+		return rules.getMaxWoundDepth() + (weapon == WeaponKind.AXE ? Math.max(0, rules.getAxeExtraDepth()) : 0);
+	}
+
+	/**
+	 * Carves a wound at a hit directly, without chance or weapon: for the API. Keeps the direction rules (never
+	 * through to the far side).
+	 */
+	public static int carveAt(PartState part, Hit hit, float[] axis, double halfLength, double radius, int maxDepth, double share) {
+		return carve(part, hit, axis, halfLength, radius, Math.max(0, maxDepth), share);
+	}
+
+	static int carve(PartState part, Hit hit, float[] axis, double halfLength, double radius, int maxDepth, double share) {
+		return carve(part, hit.x(), hit.y(), hit.z(), hit.inward(), axis, halfLength, radius, maxDepth, share);
+	}
+
+	/**
 	 * Removes the voxels within {@code radius} of a line through the hit voxel ({@code axis} times
 	 * {@code halfLength} both ways; a point when the axis is null), nearest first, within the depth and share limits.
 	 * The hit voxel always goes first, so a second blow at the same spot digs deeper.
+	 * <p>
+	 * With the direction of the blow known, depth is also counted from the face it struck: parts are only four voxels
+	 * thick, and a wound must never come out on the far side, a blow to the chest does not open the back.
 	 *
+	 * @param inward direction of the blow in voxels of the grid, null if unknown
 	 * @return how many voxels went
 	 */
-	static int carve(PartState part, int cx, int cy, int cz, float[] axis, double halfLength, double radius, WoundRules rules) {
+	static int carve(PartState part, int cx, int cy, int cz, float[] inward, float[] axis, double halfLength, double radius, int maxDepth,
+					 double share) {
 		BodyPart def = part.getPart();
-		int limit = (int) Math.floor(def.volume() * rules.getMaxCarvedShare()) - part.carvedCount();
+		int limit = (int) Math.floor(def.volume() * share) - part.carvedCount();
 		if (limit <= 0) return 0;
 		double ax = axis == null ? 0 : axis[0], ay = axis == null ? 0 : axis[1], az = axis == null ? 0 : axis[2];
 		double half = axis == null ? 0 : halfLength;
@@ -100,7 +141,9 @@ public final class WoundEngine {
 					boolean center = x == cx && y == cy && z == cz;
 					if (!center && distance > radius) continue;
 					int depth = depth(def, x, y, z);
-					if (depth > rules.getMaxWoundDepth() + 1 || !center && depth > rules.getMaxWoundDepth()) continue;
+					if (depth > maxDepth + 1 || !center && depth > maxDepth) continue;
+					int entry = entryDepth(def, inward, x, y, z);
+					if (entry > maxDepth + 1 || !center && entry > maxDepth) continue;
 					candidates.add(new double[]{center ? -1 : distance + Math.abs(along) * 0.01, x, y, z});
 				}
 			}
@@ -113,6 +156,22 @@ public final class WoundEngine {
 			count++;
 		}
 		return count;
+	}
+
+	/**
+	 * How far a voxel lies from the face a blow came in through, along the main axis of the blow; 0 without a
+	 * direction. The far face of a part is as deep as the part is thick, out of reach of any wound.
+	 */
+	static int entryDepth(BodyPart def, float[] inward, int x, int y, int z) {
+		if (inward == null) return 0;
+		int axis = Math.abs(inward[0]) >= Math.abs(inward[1])
+				? (Math.abs(inward[0]) >= Math.abs(inward[2]) ? 0 : 2)
+				: (Math.abs(inward[1]) >= Math.abs(inward[2]) ? 1 : 2);
+		int coordinate = axis == 0 ? x : axis == 1 ? y : z;
+		int size = axis == 0 ? def.gx() : axis == 1 ? def.gy() : def.gz();
+		int depth = inward[axis] >= 0 ? coordinate : size - 1 - coordinate;
+		// the far face itself never goes, however deep the weapon digs
+		return size > 1 && depth >= size - 1 ? Integer.MAX_VALUE : depth;
 	}
 
 	/**
@@ -133,12 +192,16 @@ public final class WoundEngine {
 									 RandomGenerator random) {
 		int carved = 0;
 		java.util.List<int[]> severed = new java.util.ArrayList<>();
-		double radius = Math.min(rules.getWoundRadiusMax() * 1.2, rules.getWoundRadiusBase() + damage * 0.1);
+		// a blast tears chunks out, bigger and deeper than a blow of the same damage
+		double scale = Math.max(1, rules.getExplosionWoundScale());
+		double radius = Math.min(rules.getWoundRadiusMax() * scale, (rules.getWoundRadiusBase() + damage * 0.12) * scale);
+		int depth = Math.max(rules.getMaxWoundDepth(), rules.getExplosionWoundDepth());
+		double share = Math.max(rules.getMaxCarvedShare(), rules.getExplosionCarvedShare());
 		java.util.Set<Integer> exposed = new java.util.LinkedHashSet<>();
 		for (Hit hit : hits) {
 			PartState part = state.part(hit.part());
 			exposed.add(hit.part());
-			if (part.getPart().isWoundable()) carved += carve(part, hit.x(), hit.y(), hit.z(), null, 0, radius, rules);
+			if (part.getPart().isWoundable()) carved += carve(part, hit, null, 0, radius, depth, share);
 		}
 		double over = damage - rules.getExplosionSeverDamage();
 		if (rules.isSevering() && over > 0) {

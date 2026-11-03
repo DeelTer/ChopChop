@@ -38,7 +38,35 @@ final class PaperConsequences {
 		this.crawlKey = new NamespacedKey(plugin, "crawl");
 	}
 
+	/**
+	 * A hand that is gone holds nothing: a skeleton without its bow arm has no bow to shoot.
+	 */
+	private void disarm(Mob mob, WoundState state, WoundRules rules) {
+		var equipment = mob.getEquipment();
+		if (equipment == null) return;
+		String main = mob.isLeftHanded() ? "left" : "right", off = mob.isLeftHanded() ? "right" : "left";
+		if (state.handless(main)) drop(mob, equipment.getItemInMainHand(), rules, () -> equipment.setItemInMainHand(null));
+		if (state.handless(off)) drop(mob, equipment.getItemInOffHand(), rules, () -> equipment.setItemInOffHand(null));
+		if (state.armless()) mob.setTarget(null);
+	}
+
+	private static void drop(Mob mob, org.bukkit.inventory.ItemStack stack, WoundRules rules, Runnable take) {
+		if (stack == null || stack.getType().isAir()) return;
+		org.bukkit.inventory.ItemStack copy = stack.clone();
+		take.run();
+		if (rules.isDisarmDrops()) mob.getWorld().dropItemNaturally(mob.getLocation(), copy);
+	}
+
+	boolean armless(Mob mob, WoundState state, WoundRules rules) {
+		return state != null && rules.isDisarmMobs() && state.armless();
+	}
+
+	boolean mainHandless(Mob mob, WoundState state, WoundRules rules) {
+		return state != null && rules.isDisarmMobs() && state.handless(mob.isLeftHanded() ? "left" : "right");
+	}
+
 	void apply(LivingEntity entity, Entity attacker, WoundState state, boolean wasLegless, boolean wasHeadless, WoundRules rules) {
+		if (entity instanceof Mob armed && rules.isDisarmMobs()) disarm(armed, state, rules);
 		if (!wasLegless && rules.crawls() && state.legless()) {
 			if (entity instanceof Player player) player.setPose(Pose.SWIMMING, true);
 			else if (BodyPose.crawls(state, rules) && entity instanceof Mob mob && rules.mobsLie()) lie(mob);

@@ -355,4 +355,161 @@ class CoreTest {
 		WoundState decoded = book.decode(WoundBook.encode(state));
 		assertTrue(decoded.part(1).carved(1, 1, 0));
 	}
+
+	@Test
+	void frontBlowsNeverOpenTheBack() {
+		for (WeaponKind weapon : new WeaponKind[]{WeaponKind.SWORD, WeaponKind.AXE, WeaponKind.BLUNT}) {
+			WoundRules rules = new WoundRules();
+			rules.setWoundChance(1);
+			rules.setSevering(false);
+			WoundState state = new WoundState(PROFILES.byId("zombie"));
+			Random random = new Random(1);
+			for (double y : new double[]{64.5, 64.7, 64.9, 65.1}) {
+				for (double x : new double[]{-0.15, 0, 0.15}) {
+					for (int k = 0; k < 4; k++) {
+						Hit hit = HitLocator.cast(state, SOUTH, x, y, 2, 0, 0, -1, 4);
+						if (hit != null) WoundEngine.apply(state, hit, weapon, 12, rules, random);
+					}
+				}
+			}
+			for (int i = 0; i < state.partCount(); i++) {
+				PartState part = state.part(i);
+				var def = part.getPart();
+				for (int x = 0; x < def.gx(); x++) {
+					for (int y = 0; y < def.gy(); y++) {
+						assertFalse(part.carved(x, y, def.gz() - 1), weapon + " opened the back of " + def.getName());
+					}
+				}
+			}
+		}
+	}
+
+	@Test
+	void killingBlowTakesTheLimb() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundRules rules = new WoundRules();
+		rules.setWoundChance(0);
+		rules.setLethalSeverChance(0.95);
+		int arm = profile.part("right_arm").getIndex();
+		Hit hit = new Hit(arm, 1, 9, 1, new float[3], 0);
+		Random random = new Random(3);
+		int lethal = 0, plain = 0;
+		for (int i = 0; i < 200; i++) {
+			if (WoundEngine.apply(new WoundState(profile), hit, WeaponKind.SWORD, 6, true, rules, random).severedAt() >= 0) lethal++;
+			if (WoundEngine.apply(new WoundState(profile), hit, WeaponKind.SWORD, 6, false, rules, random).severedAt() >= 0) plain++;
+		}
+		assertEquals(0, plain, "one ordinary blow never wears a fresh limb through");
+		assertTrue(lethal > 150, "the killing blow mostly takes it: " + lethal);
+		// a blunt weapon still never cuts
+		assertEquals(-1, WoundEngine.apply(new WoundState(profile), hit, WeaponKind.BLUNT, 20, true, rules, random).severedAt());
+	}
+
+	@Test
+	void heavyBlowsSeverSooner() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundRules rules = new WoundRules();
+		rules.setWoundChance(0);
+		rules.setSeverChance(1);
+		int arm = profile.part("right_arm").getIndex();
+		Hit hit = new Hit(arm, 1, 9, 1, new float[3], 0);
+		// lower arm: durability 8. A 7 damage blow wears 7 * 1.45 > 8 at once
+		assertEquals(7, WoundEngine.apply(new WoundState(profile), hit, WeaponKind.SWORD, 7, rules, new Random(1)).severedAt());
+		// a heavy chop at the head counts double
+		int head = profile.part("head").getIndex();
+		WoundState state = new WoundState(profile);
+		Hit chop = new Hit(head, 3, 4, 0, new float[3], 0);
+		assertEquals(-1, WoundEngine.apply(state, chop, WeaponKind.AXE, 9, rules, new Random(1)).severedAt());
+		assertEquals(0, WoundEngine.apply(state, chop, WeaponKind.AXE, 9, rules, new Random(1)).severedAt());
+	}
+
+	@Test
+	void blastTearsDeeperThanABlow() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundRules rules = new WoundRules();
+		rules.setSevering(false);
+		WoundState state = new WoundState(profile);
+		var hits = HitLocator.blast(state, SOUTH, 0, 65, 2, 0.6, 1.95, 5, new Random(2));
+		var outcome = WoundEngine.blast(state, hits, 10, rules, new Random(2));
+		int deep = 0;
+		for (int i = 0; i < state.partCount(); i++) {
+			PartState part = state.part(i);
+			var def = part.getPart();
+			for (int x = 0; x < def.gx(); x++)
+				for (int y = 0; y < def.gy(); y++)
+					for (int z = 0; z < def.gz(); z++) if (part.carved(x, y, z) && z == 2 && def.gz() == 4) deep++;
+		}
+		assertTrue(outcome.carved() > 20, "a chunk, not a nick: " + outcome.carved());
+		assertTrue(deep > 0, "it goes two voxels in");
+	}
+
+	@Test
+	void handsGoWithTheirArms() {
+		BodyProfile profile = PROFILES.byId("skeleton");
+		WoundState state = new WoundState(profile);
+		assertFalse(state.handless("right"));
+		assertFalse(state.armless());
+		state.part(profile.part("right_arm").getIndex()).sever(7);
+		assertTrue(state.handless("right"));
+		assertFalse(state.handless("left"));
+		assertFalse(state.armless());
+		state.part(profile.part("left_arm").getIndex()).sever(3);
+		assertTrue(state.armless());
+	}
+
+	@Test
+	void apiSeversAndWoundsDirectly() throws Exception {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(1));
+		UUID id = UUID.randomUUID();
+		WoundState state = book.getOrBlank(id, profile);
+		int leg = profile.part("left_leg").getIndex();
+		var messages = book.sever(id, 5, state, leg, 5, null, false, 9);
+		assertEquals(2, messages.size());
+		assertEquals(5, book.get(id).part(leg).getSeveredAt());
+		assertTrue(book.sever(id, 5, state, leg, 8, null, false, 9).isEmpty(), "below an existing cut nothing more comes off");
+		var event = (Protocol.Message.Event) Protocol.readClientbound(messages.getFirst(), PROFILES);
+		assertEquals(Protocol.EVENT_SEVER, event.kind());
+		assertEquals(9, event.attacker());
+
+		Hit hit = HitLocator.cast(state, SOUTH, 0, 65.0, 2, 0, 0, -1, 4);
+		assertFalse(book.wound(id, 5, state, hit, null, 0, 1.5, 1, -1).isEmpty());
+		assertTrue(book.get(id).part(hit.part()).carvedCount() > 0);
+	}
+
+	@Test
+	void corpseRoundTrip() throws Exception {
+		var message = Protocol.readClientbound(Protocol.corpse(42, 0.6F, -0.8F, 0.7F, 1234, 400), PROFILES);
+		var corpse = assertInstanceOf(Protocol.Message.Corpse.class, message);
+		assertEquals(42, corpse.entityId());
+		assertEquals(-0.8F, corpse.dz());
+		assertEquals(1234, corpse.seed());
+		assertEquals(400, corpse.ticks());
+	}
+
+	@Test
+	void apiCutFollowsTheSwing() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(1));
+		UUID id = UUID.randomUUID();
+		WoundState state = book.getOrBlank(id, profile);
+		var spot = ru.deelter.chopchop.core.api.BodyOps.locate(state, SOUTH, 0, 64.9, 2, 0, 0, -1, 4, true);
+		assertNotNull(spot);
+		assertEquals("body", spot.part());
+		assertTrue(spot.along() > 0 && spot.along() < 1);
+		// an overhead chop: the cut runs up and down the body
+		float[] axis = ru.deelter.chopchop.core.api.BodyOps.gridDirection(state, SOUTH, spot.internal().part(), 0, -1, 0);
+		assertTrue(Math.abs(axis[1]) > 0.99, "vertical swing, vertical cut");
+		ru.deelter.chopchop.core.api.BodyOps.wound(book, id, 1, state, SOUTH, spot, new double[]{0, -1, 0}, 8, 0.8, 1, -1);
+		PartState body = book.get(id).part(spot.internal().part());
+		int minY = 99, maxY = -1, minX = 99, maxX = -1;
+		for (int x = 0; x < 8; x++) for (int y = 0; y < 12; y++) for (int z = 0; z < 4; z++) {
+			if (!body.carved(x, y, z)) continue;
+			minY = Math.min(minY, y); maxY = Math.max(maxY, y); minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+		}
+		assertTrue(maxY - minY > maxX - minX, "taller than wide");
+		// sever by name and place: the left arm from its middle
+		assertFalse(ru.deelter.chopchop.core.api.BodyOps.sever(book, id, 1, state, "left_arm", 0.5, false, -1).isEmpty());
+		assertEquals(6, book.get(id).part(profile.part("left_arm").getIndex()).getSeveredAt());
+		assertTrue(ru.deelter.chopchop.core.api.BodyOps.sever(book, id, 1, state, "tail", 0.5, false, -1).isEmpty());
+	}
 }

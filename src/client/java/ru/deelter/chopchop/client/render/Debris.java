@@ -7,6 +7,7 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.LightCoordsUtil;
@@ -41,6 +42,14 @@ import java.util.List;
 public final class Debris {
 	private static final int MAX_PIECES = 48;
 	private static final double GRAVITY = 0.045;
+	/**
+	 * ticks a piece takes to fade out at the end of its time
+	 */
+	private static final int FADE_TICKS = 40;
+	/**
+	 * how close a player has to walk to a piece to kick it, blocks
+	 */
+	private static final double KICK_RANGE = 0.45;
 	private static final List<Chunk> CHUNKS = new ArrayList<>();
 
 	private Debris() {
@@ -54,6 +63,11 @@ public final class Debris {
 
 	public static final class Chunk {
 		final RenderType skin;
+		/**
+		 * the skin texture, for fading out; null: it shrinks away instead
+		 */
+		final net.minecraft.resources.Identifier texture;
+		int kickCooldown;
 		final BodyPart part;
 		final VoxelMask mask;
 		final int cut;
@@ -82,9 +96,10 @@ public final class Debris {
 		boolean resting;
 		boolean kept;
 
-		Chunk(RenderType skin, BodyPart part, VoxelMask mask, int cut, List<Piece> pieces, Vector3f pivot, Vec3 body, float size,
-			  boolean flung, Vec3 away, RandomSource random) {
+		Chunk(RenderType skin, net.minecraft.resources.Identifier texture, BodyPart part, VoxelMask mask, int cut, List<Piece> pieces,
+			  Vector3f pivot, Vec3 body, float size, boolean flung, Vec3 away, RandomSource random) {
 			this.skin = skin;
+			this.texture = texture;
 			this.part = part;
 			this.mask = mask;
 			this.cut = cut;
@@ -152,8 +167,8 @@ public final class Debris {
 	 * @param pose   the model's pose, relative to the camera
 	 * @param entity where the entity stands
 	 */
-	public static void capture(Model<?> model, WoundState state, int entityId, PoseStack.Pose pose, RenderType skin, double[] camera,
-							   Vec3 entity) {
+	public static void capture(Model<?> model, WoundState state, int entityId, PoseStack.Pose pose, RenderType skin,
+							   net.minecraft.resources.Identifier texture, double[] camera, Vec3 entity) {
 		List<ClientWounds.Detach> detaches = ClientWounds.takeDetaches(entityId);
 		if (detaches.isEmpty() || !ClientConfig.get().isDebris()) return;
 		Bindings.ensure(model);
@@ -198,7 +213,7 @@ public final class Debris {
 					}
 				}
 			}
-			Chunk chunk = new Chunk(skin, part, mask, cut, pieces, center, entity, size, detach.flung(), detach.away(), level.getRandom());
+			Chunk chunk = new Chunk(skin, texture, part, mask, cut, pieces, center, entity, size, detach.flung(), detach.away(), level.getRandom());
 			CHUNKS.add(chunk);
 			if (chunk.head && Minecraft.getInstance().player != null && entityId == Minecraft.getInstance().player.getId()) {
 				HeadCam.follow(chunk);
@@ -215,6 +230,7 @@ public final class Debris {
 			return;
 		}
 		int lifetime = ClientConfig.get().getDebrisSeconds() * 20;
+		boolean kick = ClientConfig.get().isDebrisKick();
 		Iterator<Chunk> it = CHUNKS.iterator();
 		while (it.hasNext()) {
 			Chunk c = it.next();
@@ -227,6 +243,7 @@ public final class Debris {
 			// a head rests on its side, not on its center
 			float rest = c.head ? c.size / 2F : 0.06F;
 			Vec3 at = new Vec3(c.pivot.x + c.offset.x, c.pivot.y + c.offset.y, c.pivot.z + c.offset.z);
+			if (kick && !c.kept && --c.kickCooldown <= 0) kick(c, at, level);
 			if (!c.resting) {
 				c.velocity.y -= (float) GRAVITY;
 				c.velocity.mul(0.98F);
@@ -260,6 +277,33 @@ public final class Debris {
 	}
 
 	/**
+	 * A player walking into a piece on the ground sends it rolling: light, a little up, away from the feet, harder
+	 * the faster the player goes. Only close players are looked at, a handful per world.
+	 */
+	private static void kick(Chunk c, Vec3 at, ClientLevel level) {
+		for (var player : level.players()) {
+			double dx = at.x - player.getX(), dz = at.z - player.getZ();
+			double dy = at.y - player.getY();
+			if (dy < -0.4 || dy > 1.0 || dx * dx + dz * dz > KICK_RANGE * KICK_RANGE) continue;
+			double moved = Math.sqrt(Math.pow(player.getX() - player.xo, 2) + Math.pow(player.getZ() - player.zo, 2));
+			double distance = Math.sqrt(dx * dx + dz * dz);
+			if (distance < 1e-3) {
+				dx = Math.random() - 0.5;
+				dz = Math.random() - 0.5;
+				distance = Math.sqrt(dx * dx + dz * dz);
+			}
+			float push = (float) Math.min(0.35, 0.06 + moved * 0.9);
+			// a head is heavier than a hand
+			if (c.head) push *= 0.6F;
+			c.velocity.set((float) (dx / distance) * push, 0.05F + push * 0.4F, (float) (dz / distance) * push);
+			c.spin = 0.15F + push;
+			c.resting = false;
+			c.kickCooldown = 6;
+			return;
+		}
+	}
+
+	/**
 	 * A head on the ground rolls over to sit upright and face its body. Upright facing yaw {@code φ} is the rotation
 	 * the game gives a body standing that way: {@code Ry(180 - φ)} after the model's flip, {@code Rz(180)}.
 	 */
@@ -283,8 +327,13 @@ public final class Debris {
 		boolean bones = ClientConfig.get().isBones();
 		int lifetime = ClientConfig.get().getDebrisSeconds() * 20;
 		for (Chunk c : CHUNKS) {
-			int left = (c.head ? lifetime * 2 : lifetime) - c.age;
-			float shrink = c.kept ? 1F : Math.min(1F, left / 10F);
+			float left = (c.head ? lifetime * 2 : lifetime) - c.age - partial;
+			// the end: fades out over two seconds; a piece without a known texture shrinks away instead
+			float fade = c.kept ? 1F : Math.clamp(left / FADE_TICKS, 0F, 1F);
+			boolean translucent = fade < 1F && c.texture != null;
+			float shrink = c.kept || translucent ? 1F : Math.min(1F, left / 10F);
+			int color = translucent ? (Math.max(1, Math.round(fade * 255)) << 24) | 0xFFFFFF : -1;
+			RenderType skin = translucent ? RenderTypes.entityTranslucent(c.texture) : c.skin;
 			Vector3f at = new Vector3f(c.lastOffset).lerp(c.offset, partial);
 			Quaternionf turn = new Quaternionf(c.lastRotation).slerp(c.rotation, partial);
 			Matrix4f move = new Matrix4f()
@@ -298,23 +347,24 @@ public final class Debris {
 				VoxelMesher.Grid grid = VoxelMesher.Grid.of(piece.cube(), piece.binding(), c.part);
 				int light = c.light;
 				var collector = context.submitNodeCollector();
-				collector.submitCustomGeometry(stack, c.skin,
-						(pose, consumer) -> VoxelMesher.skin(piece.cube(), grid, c.mask, pose, Sink.of(consumer, -1, light, OverlayTexture.NO_OVERLAY)));
+				collector.submitCustomGeometry(stack, skin,
+						(pose, consumer) -> VoxelMesher.skin(piece.cube(), grid, c.mask, pose, Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));
 				if (piece == c.pieces.getFirst()) {
 					String material = c.part.getMaterial();
 					boolean meat = Material.bleeds(material);
-					RenderType inside = meat ? GoreRender.meatType() : GoreRender.boneType();
+					RenderType inside = translucent ? RenderTypes.entityTranslucent(meat ? GoreRender.MEAT : GoreRender.BONE)
+							: meat ? GoreRender.meatType() : GoreRender.boneType();
 					collector.submitCustomGeometry(stack, inside, (pose, consumer) -> {
-						Sink sink = Sink.of(consumer, -1, light, OverlayTexture.NO_OVERLAY);
+						Sink sink = Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY);
 						VoxelMesher.inside(grid, c.mask, material, pose, sink);
 						// a head has its neck at the bottom
 						if (c.cut == 0) VoxelMesher.neck(grid, grid.gy(), true, pose, sink);
 					});
 					if (meat && bones) {
 						int row = c.cut == 0 ? grid.gy() : c.cut;
-						collector.submitCustomGeometry(stack, GoreRender.boneType(),
+						collector.submitCustomGeometry(stack, translucent ? RenderTypes.entityTranslucent(GoreRender.BONE) : GoreRender.boneType(),
 								(pose, consumer) -> VoxelMesher.bone(grid, row, c.part.getBoneScale(), c.cut == 0, pose,
-										Sink.of(consumer, -1, light, OverlayTexture.NO_OVERLAY)));
+										Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));
 					}
 				}
 				stack.popPose();

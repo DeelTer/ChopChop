@@ -16,6 +16,8 @@ wounds:
   slash-length-per-damage: 0.35
   slash-length-max: 7.0
   slash-width: 0.85
+  # an axe chops pieces out: this many voxels deeper than a sword
+  axe-extra-depth: 1
   # a part never loses more than this share to wounds
   max-carved-share: 0.45
 severing:
@@ -25,6 +27,16 @@ severing:
   durability-multiplier: 1.0
   # a single hit weaker than this never severs
   min-damage: 4.0
+  # every point of damage above min-damage adds this to the chance (at most 0.95)
+  chance-per-damage: 0.05
+  # a heavy blow wears a limb faster: x (1 + (damage - min-damage) * heavy-bonus)
+  heavy-bonus: 0.15
+  # the blow that kills (sword, axe) takes the limb it hits with this chance, worn or not
+  lethal-chance: 0.6
+  # the same for the head
+  lethal-head-chance: 0.45
+  # a chop at the head counts as 1 + damage / head-hit-damage chops (0: always one)
+  head-hit-damage: 8.0
   # heads come off after three chops of a sword or an axe (the count is in the profile)
   heads: true
   # a body without its head dies: a player at once, a mob after running around blind
@@ -48,6 +60,17 @@ explosions:
   sever-chance-per-damage: 0.06
   # a player killed by a blast always loses the head, thrown away from the blast
   death-takes-head: true
+  # blasts tear chunks: deeper and bigger than blows, and may take more of a part
+  wound-depth: 2
+  wound-scale: 1.6
+  max-carved-share: 0.6
+disarm:
+  # a mob that loses the hand with an item loses the item (no bow, no shooting); without arms it attacks no more
+  mobs: true
+  # the item drops to the ground; off, it is gone
+  drops: false
+# dead mobs lie as bodies this long for players with the mod, then sink away. 0: vanilla death
+corpse-seconds: 20.0
 kill-cam:
   # monsters after the killer within threat-radius: skip (no kill cam), freeze (they stand still), ignore
   threats: skip

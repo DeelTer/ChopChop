@@ -39,6 +39,10 @@ public final class ClothScreen {
 				.setDefaultValue(defaults.isDebris()).setSaveConsumer(config::setDebris).build());
 		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.debrisSeconds"), config.getDebrisSeconds(), 1, 60)
 				.setDefaultValue(defaults.getDebrisSeconds()).setSaveConsumer(config::setDebrisSeconds).build());
+		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.debrisKick"), config.isDebrisKick())
+				.setDefaultValue(defaults.isDebrisKick()).setSaveConsumer(config::setDebrisKick).build());
+		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.corpses"), config.isCorpses())
+				.setDefaultValue(defaults.isCorpses()).setSaveConsumer(config::setCorpses).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.bones"), config.isBones())
 				.setDefaultValue(defaults.isBones()).setSaveConsumer(config::setBones).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.firstPerson"), config.isFirstPerson())

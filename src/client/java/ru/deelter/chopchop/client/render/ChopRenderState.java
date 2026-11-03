@@ -19,4 +19,19 @@ public interface ChopRenderState {
 	double[] chopchop$camera();
 
 	void chopchop$setSubmit(Model<?> main, double camX, double camY, double camZ);
+
+	/**
+	 * A dead body lying on the ground: direction of the fall in the model's turned frame (x, z), how far it tipped
+	 * (radians), the roll, how far it sank (0 to 1). Null for a living entity.
+	 */
+	float[] chopchop$corpse();
+
+	void chopchop$setCorpse(float[] corpse);
+
+	/**
+	 * the skin of the entity, for pieces that fade out
+	 */
+	net.minecraft.resources.Identifier chopchop$texture();
+
+	void chopchop$setTexture(net.minecraft.resources.Identifier texture);
 }

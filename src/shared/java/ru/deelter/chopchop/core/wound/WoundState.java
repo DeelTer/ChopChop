@@ -58,6 +58,30 @@ public final class WoundState {
 		return head != null && parts[head.getIndex()].getSeveredAt() == 0;
 	}
 
+	/**
+	 * The arm with the hand of this side ("right" or "left") is cut off anywhere: the hand is gone with it.
+	 * False for a body without such a hand.
+	 */
+	public boolean handless(String side) {
+		for (PartState part : parts) {
+			if (side.equalsIgnoreCase(part.getPart().getHand()) && part.severed()) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Every hand of a body that has hands is gone: it can hold nothing and hit with nothing.
+	 */
+	public boolean armless() {
+		boolean any = false;
+		for (PartState part : parts) {
+			if (part.getPart().getHand() == null) continue;
+			any = true;
+			if (!part.severed()) return false;
+		}
+		return any;
+	}
+
 	public void touch() {
 		revision++;
 	}

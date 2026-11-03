@@ -10,6 +10,8 @@
   "chopchop.config.soundVolume": "Громкость звуков",
   "chopchop.config.debris": "Отрубленные части падают",
   "chopchop.config.debrisSeconds": "Отрубленные части лежат, секунд",
+  "chopchop.config.debrisKick": "Игроки пинают отрубленные части",
+  "chopchop.config.corpses": "Мёртвые мобы остаются телами",
   "chopchop.config.bones": "Кости в обрубках",
   "chopchop.config.firstPerson": "Раны на своих руках",
   "chopchop.config.hideItems": "Прятать предметы в отрубленной руке",

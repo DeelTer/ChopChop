@@ -51,7 +51,15 @@ public final class WoundBook {
 	 */
 	public List<byte[]> hit(UUID id, int entityId, WoundState state, Hit hit, WeaponKind weapon, float damage, WoundRules rules,
 							 int attacker) {
-		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, damage, rules, random);
+		return hit(id, entityId, state, hit, weapon, damage, false, rules, attacker);
+	}
+
+	/**
+	 * @param lethal the blow killed the body: it likely takes what it hits
+	 */
+	public List<byte[]> hit(UUID id, int entityId, WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal,
+							 WoundRules rules, int attacker) {
+		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, damage, lethal, rules, random);
 		List<byte[]> messages = new ArrayList<>(2);
 		if (!outcome.changed()) {
 			messages.add(Protocol.event(entityId, Protocol.EVENT_SPLASH, hit.part(), hit.model(), -1, attacker));
@@ -97,6 +105,53 @@ public final class WoundBook {
 		if (outcome.carved() > 0) messages.add(Protocol.event(entityId, Protocol.EVENT_WOUND, first.part(), first.model(), -1, -1));
 		messages.add(Protocol.state(entityId, state));
 		return messages;
+	}
+
+	/**
+	 * Cuts a part off at a row, whatever the rules say: for the API.
+	 *
+	 * @param at       point of the cut in model space, pixels, for the effects; null: the middle of the cut
+	 * @param flung    it flies off hard, as torn off by a blast
+	 * @param attacker network id of who did it, -1 for none
+	 * @return the messages for the clients, empty if nothing more came off
+	 */
+	public List<byte[]> sever(UUID id, int entityId, WoundState state, int part, int row, float[] at, boolean flung, int attacker) {
+		List<byte[]> messages = new ArrayList<>(2);
+		if (part < 0 || part >= state.partCount() || !state.part(part).sever(row)) return messages;
+		state.touch();
+		states.put(id, state);
+		float[] point = at != null ? at : cutCenter(state, part, row);
+		messages.add(Protocol.event(entityId, flung ? Protocol.EVENT_BLAST : Protocol.EVENT_SEVER, part, point, row, attacker));
+		messages.add(Protocol.state(entityId, state));
+		return messages;
+	}
+
+	/**
+	 * Carves a wound at a hit, whatever the chance in the rules: for the API.
+	 *
+	 * @param slash      direction of a cut across the surface in voxels of the grid, null for a round hole
+	 * @param halfLength half the length of the cut, voxels
+	 * @param radius     radius of the hole or width of the cut, voxels
+	 * @param depth      how deep under the surface it may go, voxels
+	 * @return the messages for the clients, empty if nothing was carved
+	 */
+	public List<byte[]> wound(UUID id, int entityId, WoundState state, Hit hit, float[] slash, double halfLength, double radius, int depth,
+							  int attacker) {
+		List<byte[]> messages = new ArrayList<>(2);
+		if (hit.part() < 0 || hit.part() >= state.partCount() || !state.part(hit.part()).getPart().isWoundable()) return messages;
+		int carved = WoundEngine.carveAt(state.part(hit.part()), hit, slash, halfLength, radius, depth, 1.0);
+		if (carved == 0) return messages;
+		state.touch();
+		states.put(id, state);
+		messages.add(Protocol.event(entityId, Protocol.EVENT_WOUND, hit.part(), hit.model(), -1, attacker));
+		messages.add(Protocol.state(entityId, state));
+		return messages;
+	}
+
+	private static float[] cutCenter(WoundState state, int part, int row) {
+		var def = state.getProfile().part(part);
+		var center = ru.deelter.chopchop.core.hit.HitLocator.voxelCenter(state.getProfile(), def, def.gx() / 2, Math.min(def.gy() - 1, row), def.gz() / 2);
+		return new float[]{(float) center.x, (float) center.y, (float) center.z};
 	}
 
 	/**

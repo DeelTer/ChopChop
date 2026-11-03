@@ -61,11 +61,22 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	 * @param from  where the blast went off
 	 */
 	private record Pending(LivingEntity target, double healthBefore, Hit hit, WeaponKind weapon, Entity attacker, List<Hit> blast,
-						   Location from) {
+						   Location from, double dealt) {
+	}
+
+	private static ChopPlugin instance;
+	/**
+	 * which damage the plugin turns into wounds on its own, see {@link ru.deelter.chopchop.paper.api.ChopChopApi}
+	 */
+	private java.util.function.BiPredicate<LivingEntity, EntityDamageEvent> automatic = (target, event) -> true;
+
+	static ChopPlugin instance() {
+		return instance;
 	}
 
 	@Override
 	public void onEnable() {
+		instance = this;
 		saveDefaultConfig();
 		profiles = Profiles.loadBuiltin();
 		storageKey = new NamespacedKey(this, "wounds");
@@ -155,6 +166,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		if (target instanceof Player ? !rules.isPlayers() : !rules.isMobs()) return;
 		BodyProfile profile = profiles.forEntity(target.getType().getKey().toString());
 		if (profile == null) return;
+		if (!automaticAllows(target, event)) return;
 		WoundState state = book.getOrBlank(target.getUniqueId(), profile);
 		EntityDamageEvent.DamageCause cause = event.getCause();
 		if (rules.isExplosions() && (cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION || cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION)) {
@@ -165,11 +177,11 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			List<Hit> hits = HitLocator.blast(state, pose(target).crawling(state, rules), from.getX(), from.getY(), from.getZ(),
 					target.getWidth(), target.getHeight(), rules.getExplosionWounds(), java.util.concurrent.ThreadLocalRandom.current());
 			if (hits.isEmpty()) return;
-			pending.add(new Pending(target, health(target), hits.getFirst(), WeaponKind.OTHER, attacker(event), hits, from));
+			pending.add(new Pending(target, health(target), hits.getFirst(), WeaponKind.OTHER, attacker(event), hits, from, event.getFinalDamage()));
 		} else {
 			Located located = locate(target, event, state);
 			if (located == null) return;
-			pending.add(new Pending(target, health(target), located.hit, located.weapon, attacker(event), null, null));
+			pending.add(new Pending(target, health(target), located.hit, located.weapon, attacker(event), null, null, event.getFinalDamage()));
 		}
 		if (!flushScheduled) {
 			flushScheduled = true;
@@ -199,7 +211,8 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			}
 			List<byte[]> messages = p.blast != null
 					? book.blast(target.getUniqueId(), target.getEntityId(), state, p.blast, lost, blastHead(target, state, p.from), rules)
-					: book.hit(target.getUniqueId(), target.getEntityId(), state, p.hit, p.weapon, lost, rules, attacker);
+					: book.hit(target.getUniqueId(), target.getEntityId(), state, p.hit, p.weapon,
+					target.isDead() ? (float) Math.max(lost, p.dealt) : lost, target.isDead(), rules, attacker);
 			for (byte[] message : messages) broadcast(target, message);
 			if (!wasHeadless && state.headless() && attacker >= 0 && p.blast == null && "freeze".equalsIgnoreCase(rules.getKillCamThreats())) {
 				consequences.freeze(threats, rules);
@@ -207,6 +220,95 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			consequences.apply(target, p.attacker, state, wasLegless, wasHeadless, rules);
 			if (target instanceof Player player && rules.isPersistPlayers()) store(player);
 		}
+	}
+
+	private boolean automaticAllows(LivingEntity target, EntityDamageEvent event) {
+		try {
+			return automatic.test(target, event);
+		} catch (RuntimeException e) {
+			getLogger().log(java.util.logging.Level.WARNING, "The ChopChop damage filter of another plugin threw", e);
+			return true;
+		}
+	}
+
+	/**
+	 * A mob dies: the clients with the mod keep it on the ground as a body, falling away from the last blow.
+	 */
+	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+	public void onDeath(org.bukkit.event.entity.EntityDeathEvent event) {
+		LivingEntity target = event.getEntity();
+		if (target instanceof Player || !rules.isEnabled() || rules.getCorpseSeconds() <= 0) return;
+		if (profiles.forEntity(target.getType().getKey().toString()) == null) return;
+		Vector push = new Vector();
+		if (target.getLastDamageCause() instanceof EntityDamageByEntityEvent by) {
+			push = target.getLocation().toVector().subtract(by.getDamager().getLocation().toVector());
+		}
+		push.setY(0);
+		if (push.lengthSquared() < 1e-6) push = target.getVelocity().setY(0);
+		if (push.lengthSquared() < 1e-6) push = target.getLocation().getDirection().multiply(-1).setY(0);
+		if (push.lengthSquared() < 1e-6) push = new Vector(0, 0, 1);
+		push.normalize();
+		double damage = target.getLastDamageCause() == null ? 4 : target.getLastDamageCause().getFinalDamage();
+		float strength = (float) Math.min(1.5, 0.25 + damage / 20.0);
+		byte[] message = Protocol.corpse(target.getEntityId(), (float) push.getX(), (float) push.getZ(), strength,
+				java.util.concurrent.ThreadLocalRandom.current().nextInt(), (int) Math.round(rules.getCorpseSeconds() * 20));
+		broadcast(target, message);
+	}
+
+	/**
+	 * No arms, no blows; no hand, no bow and nothing picked up.
+	 */
+	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+	public void onMobAttack(EntityDamageByEntityEvent event) {
+		if (event.getDamager() instanceof Mob mob && event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK
+				&& consequences.armless(mob, book.get(mob.getUniqueId()), rules)) event.setCancelled(true);
+	}
+
+	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+	public void onShoot(org.bukkit.event.entity.EntityShootBowEvent event) {
+		if (event.getEntity() instanceof Mob mob && consequences.mainHandless(mob, book.get(mob.getUniqueId()), rules)) event.setCancelled(true);
+	}
+
+	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+	public void onPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
+		if (event.getEntity() instanceof Mob mob && consequences.mainHandless(mob, book.get(mob.getUniqueId()), rules)) event.setCancelled(true);
+	}
+
+	// for the public API, see ru.deelter.chopchop.paper.api.ChopChopApi
+
+	WoundBook book() {
+		return book;
+	}
+
+	Profiles profiles() {
+		return profiles;
+	}
+
+	WoundRules rules() {
+		return rules;
+	}
+
+	void setAutomatic(java.util.function.BiPredicate<LivingEntity, EntityDamageEvent> filter) {
+		automatic = filter == null ? (target, event) -> true : filter;
+	}
+
+	BodyPose poseOf(LivingEntity entity, WoundState state) {
+		return pose(entity).crawling(state, rules);
+	}
+
+	void broadcastApi(Entity entity, byte[] message) {
+		broadcast(entity, message);
+	}
+
+	void consequencesApi(LivingEntity target, Entity attacker, WoundState state, boolean wasLegless, boolean wasHeadless) {
+		consequences.apply(target, attacker, state, wasLegless, wasHeadless, rules);
+		if (target instanceof Player player && rules.isPersistPlayers()) store(player);
+	}
+
+	public void healApi(LivingEntity entity) {
+		consequences.clear(entity);
+		if (book.clear(entity.getUniqueId())) broadcast(entity, Protocol.clear(entity.getEntityId()));
+		if (entity instanceof Player player) player.getPersistentDataContainer().remove(storageKey);
 	}
 
 	/**
@@ -259,7 +361,9 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			double reach;
 			if (living instanceof Player) {
 				dir = eye.getDirection();
-				reach = 4.5;
+				// as the Fabric server: the reach of the player and a little more
+				AttributeInstance range = living.getAttribute(Attribute.ENTITY_INTERACTION_RANGE);
+				reach = (range == null ? 3.0 : range.getValue()) + 1.5;
 			} else {
 				// a mob hits where it looks when it looks at the target (zombies look you in the eyes), the middle otherwise
 				Vector center = target.getBoundingBox().getCenter();

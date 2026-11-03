@@ -39,6 +39,10 @@ public final class WoundRules {
 	 */
 	private int maxWoundDepth = 1;
 	/**
+	 * extra depth of the wounds of an axe, voxels: it chops pieces out, a sword cuts
+	 */
+	private int axeExtraDepth = 1;
+	/**
 	 * a part never loses more than this share of its voxels to wounds
 	 */
 	private double maxCarvedShare = 0.45;
@@ -55,6 +59,30 @@ public final class WoundRules {
 	 * a single hit weaker than this never severs
 	 */
 	private double minSeverDamage = 4.0;
+	/**
+	 * Every point of damage above {@link #minSeverDamage} adds this to {@link #severChance}: a netherite axe takes a
+	 * limb far more often than a stone sword. The chance never goes above 0.95
+	 */
+	private double severChancePerDamage = 0.05;
+	/**
+	 * Heavy blows wear a segment down faster: its damage towards severing is multiplied by
+	 * {@code 1 + (damage - minSeverDamage) * severHeavyBonus}
+	 */
+	private double severHeavyBonus = 0.15;
+	/**
+	 * The blow that kills a body with a sword or an axe takes the limb it hits with this chance, whatever the
+	 * durability: most weapons kill a zombie in three or four blows, long before a limb would wear through
+	 */
+	private double lethalSeverChance = 0.6;
+	/**
+	 * The same for the head: a killing chop at the head takes it with this chance
+	 */
+	private double lethalHeadChance = 0.45;
+	/**
+	 * A chop at the head counts as {@code 1 + damage / headHitDamage} chops: a heavy weapon takes the head in fewer
+	 * blows. 0 counts every chop as one
+	 */
+	private double headHitDamage = 8.0;
 	/**
 	 * Heads come off. A head segment counts hits (three chops by default) instead of damage
 	 */
@@ -100,6 +128,16 @@ public final class WoundRules {
 	 * how many spots of the body a blast tears at
 	 */
 	private int explosionWounds = 5;
+	/**
+	 * A blast tears chunks out of the body rather than nicks: their depth in voxels and how much bigger they are than
+	 * a wound of a hit with the same damage
+	 */
+	private int explosionWoundDepth = 2;
+	private double explosionWoundScale = 1.6;
+	/**
+	 * a body a blast tears at loses at most this share of a part, more than to blows
+	 */
+	private double explosionCarvedShare = 0.6;
 	private double explosionSeverDamage = 8.0;
 	/**
 	 * chance of each limb facing the blast to come off, per point of damage above explosionSeverDamage
@@ -116,6 +154,20 @@ public final class WoundRules {
 	private String killCamThreats = "skip";
 	private double killCamThreatRadius = 8.0;
 	private double killCamFreezeSeconds = 2.5;
+	/**
+	 * A mob that loses the arm with a weapon or a bow in its hand loses the item too, and one without any arm
+	 * attacks no more and picks nothing up: a skeleton without its bow arm stops shooting. Players are not touched
+	 */
+	private boolean disarmMobs = true;
+	/**
+	 * the item of a cut off hand drops to the ground; off, it is gone (no farm of mob gear)
+	 */
+	private boolean disarmDrops = false;
+	/**
+	 * Dead mobs stay on the ground as bodies for this long, falling the way the last blow pushed them, then sink
+	 * away. 0: they go the vanilla way
+	 */
+	private double corpseSeconds = 20.0;
 	private Map<WeaponKind, WeaponRule> weapons = defaultWeapons();
 	/**
 	 * Player wounds survive a restart of the server. Off: they last as long as the server runs or until respawn

@@ -32,6 +32,7 @@ public abstract class LivingEntityHurtMixin {
 		if (!cir.getReturnValueZ()) return;
 		LivingEntity self = (LivingEntity) (Object) this;
 		float lost = health.get() - (self.getHealth() + self.getAbsorptionAmount());
-		if (lost > 0) ChopServer.onDamaged(self, source, lost);
+		if (lost > 0) ChopServer.onDamaged(self, source, lost, damage);
+		if (lost > 0 && self.isDeadOrDying()) ChopServer.onDied(self, source, damage);
 	}
 }

@@ -249,8 +249,11 @@ public final class HitLocator {
 						min[1] + (go[1] + gd[1] * t) * size[1] / grid[1],
 						min[2] + (go[2] + gd[2] * t) * size[2] / grid[2]);
 				Vector3d model = partToModel(profile, part).transformPosition(local);
+				double inLength = Math.sqrt(gd[0] * gd[0] + gd[1] * gd[1] + gd[2] * gd[2]);
+				float[] inward = inLength < 1e-12 ? null
+						: new float[]{(float) (gd[0] / inLength), (float) (gd[1] / inLength), (float) (gd[2] / inLength)};
 				return new Hit(part.getIndex(), cell[0], cell[1], cell[2], new float[]{(float) model.x, (float) model.y, (float) model.z}, t,
-						slash(toLocal, d, up, grid, size));
+						slash(toLocal, d, up, grid, size), inward);
 			}
 			int a = tMax[0] < tMax[1] ? (tMax[0] < tMax[2] ? 0 : 2) : (tMax[1] < tMax[2] ? 1 : 2);
 			t = tMax[a];

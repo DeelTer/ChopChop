@@ -17,6 +17,30 @@ public abstract class EntityRenderStateMixin implements ChopRenderState {
 	private Model<?> chopchop$main;
 	@Unique
 	private final double[] chopchop$camera = new double[3];
+	@Unique
+	private float[] chopchop$corpse;
+	@Unique
+	private net.minecraft.resources.Identifier chopchop$texture;
+
+	@Override
+	public float[] chopchop$corpse() {
+		return chopchop$corpse;
+	}
+
+	@Override
+	public void chopchop$setCorpse(float[] corpse) {
+		chopchop$corpse = corpse;
+	}
+
+	@Override
+	public net.minecraft.resources.Identifier chopchop$texture() {
+		return chopchop$texture;
+	}
+
+	@Override
+	public void chopchop$setTexture(net.minecraft.resources.Identifier texture) {
+		chopchop$texture = texture;
+	}
 
 	@Override
 	public WoundState chopchop$wounds() {

@@ -42,6 +42,11 @@ public final class Protocol {
 	 * an entity is whole again
 	 */
 	public static final byte S_CLEAR = 4;
+	/**
+	 * an entity died and stays as a body: how it falls, the same for every client. Payload: entity, direction of
+	 * the fall in the world (x, z), its strength, a seed for the rest, ticks it lies there
+	 */
+	public static final byte S_CORPSE = 5;
 
 	public static final byte EVENT_SPLASH = 0;
 	public static final byte EVENT_WOUND = 1;
@@ -117,6 +122,23 @@ public final class Protocol {
 		});
 	}
 
+	/**
+	 * @param dx       direction the body falls, in the world: where the last blow pushed it
+	 * @param strength how hard, about 0 to 1
+	 * @param ticks    how long it lies before it is gone
+	 */
+	public static byte[] corpse(int entityId, float dx, float dz, float strength, int seed, int ticks) {
+		return write(out -> {
+			out.writeByte(S_CORPSE);
+			out.writeInt(entityId);
+			out.writeFloat(dx);
+			out.writeFloat(dz);
+			out.writeFloat(strength);
+			out.writeInt(seed);
+			out.writeInt(ticks);
+		});
+	}
+
 	public static byte[] clear(int entityId) {
 		return write(out -> {
 			out.writeByte(S_CLEAR);
@@ -157,6 +179,12 @@ public final class Protocol {
 			case S_EVENT -> new Message.Event(in.readInt(), in.readByte(), in.readUnsignedByte(),
 					new float[]{in.readFloat(), in.readFloat(), in.readFloat()}, in.readShort(), in.available() >= 4 ? in.readInt() : -1);
 			case S_CLEAR -> new Message.Clear(in.readInt());
+			case S_CORPSE -> {
+				int entity = in.readInt();
+				float dx = in.readFloat(), dz = in.readFloat(), strength = in.readFloat();
+				if (!Float.isFinite(dx) || !Float.isFinite(dz) || !Float.isFinite(strength)) throw new IOException("bad corpse");
+				yield new Message.Corpse(entity, dx, dz, Math.clamp(strength, 0, 2), in.readInt(), Math.clamp(in.readInt(), 0, 20 * 600));
+			}
 			default -> throw new IOException("unknown message " + type);
 		};
 	}
@@ -194,6 +222,9 @@ public final class Protocol {
 		}
 
 		record Clear(int entityId) implements Message {
+		}
+
+		record Corpse(int entityId, float dx, float dz, float strength, int seed, int ticks) implements Message {
 		}
 	}
 }

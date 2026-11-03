@@ -45,6 +45,7 @@ public final class ChopChopClient implements ClientModInitializer {
 			ClientWounds.clearAll();
 			Debris.clear();
 			Effects.clear();
+			Corpses.clear();
 			helloSent = false;
 			// a server without ChopChop does not listen on the channel, and hears nothing
 			if (ClientPlayNetworking.canSend(ChopPayload.TYPE)) sayHello();
@@ -58,11 +59,13 @@ public final class ChopChopClient implements ClientModInitializer {
 			ClientWounds.clearAll();
 			Debris.clear();
 			Effects.clear();
+			Corpses.clear();
 		});
 		ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> ClientWounds.clear(entity.getId()));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			ClientWounds.tick(client);
 			Debris.tick(client);
+			Corpses.tick(client);
 			Effects.tick(client);
 			HeadCam.tick(client);
 			KillCam.tick(client);
@@ -75,7 +78,7 @@ public final class ChopChopClient implements ClientModInitializer {
 		};
 
 		if (FabricLoader.getInstance().isModLoaded("modelinteractions")) {
-			ChopChop.LOG.info("ModelInteractions found: wounds follow the parts it bends, nothing else to set up");
+			ChopChop.LOG.info("ModelInteractions found: wounds follow the parts it bends, cut off parts can't be grabbed");
 		}
 	}
 
@@ -112,6 +115,7 @@ public final class ChopChopClient implements ClientModInitializer {
 			}
 			case Protocol.Message.State state -> ClientWounds.put(state.entityId(), state.state());
 			case Protocol.Message.Clear clear -> ClientWounds.clear(clear.entityId());
+			case Protocol.Message.Corpse corpse -> Corpses.add(corpse);
 			case Protocol.Message.Event event -> {
 				boolean cut = event.kind() == Protocol.EVENT_SEVER || event.kind() == Protocol.EVENT_BLAST;
 				if (cut && event.severedAt() >= 0 && ClientConfig.get().isDebris()) {

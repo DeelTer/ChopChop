@@ -10,6 +10,8 @@
   "chopchop.config.soundVolume": "Sound volume",
   "chopchop.config.debris": "Severed limbs fall off",
   "chopchop.config.debrisSeconds": "Severed limbs stay, seconds",
+  "chopchop.config.debrisKick": "Players kick severed limbs about",
+  "chopchop.config.corpses": "Dead mobs stay as bodies",
   "chopchop.config.bones": "Bones in stumps",
   "chopchop.config.firstPerson": "Wounds on your own hands",
   "chopchop.config.hideItems": "Hide items in severed hands",

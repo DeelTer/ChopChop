@@ -138,6 +138,20 @@ public final class ChopServer {
 	}
 
 	/**
+	 * A mob with no arm left, see {@code MobArmsMixin}.
+	 */
+	public static boolean armless(Mob mob) {
+		return Consequences.noHands(mob);
+	}
+
+	/**
+	 * A mob without the hand it holds things in.
+	 */
+	public static boolean mainHandless(Mob mob) {
+		return Consequences.noMainHand(mob);
+	}
+
+	/**
 	 * What the server knows of an entity's wounds, null when it is whole.
 	 */
 	public static WoundState wounds(Entity entity) {
@@ -154,7 +168,16 @@ public final class ChopServer {
 	 * @param lost health and absorption the hit took
 	 */
 	public static void onDamaged(LivingEntity target, DamageSource source, float lost) {
+		onDamaged(target, source, lost, lost);
+	}
+
+	/**
+	 * @param dealt the damage of the blow before armor: the killing blow of a weak target is judged by it, not by
+	 *              the little health that was left
+	 */
+	public static void onDamaged(LivingEntity target, DamageSource source, float lost, float dealt) {
 		if (book == null || config == null) return;
+		if (ChopApiHooks.skipsAutomatic(target, source)) return;
 		WoundRules rules = config.getRules();
 		if (!rules.isEnabled() || lost <= 0) return;
 		boolean player = target instanceof Player;
@@ -178,13 +201,37 @@ public final class ChopServer {
 			threats = Consequences.threats(killer, target, rules);
 			if (!threats.isEmpty() && "skip".equalsIgnoreCase(rules.getKillCamThreats())) attacker = -1;
 		}
-		List<byte[]> messages = book.hit(target.getUUID(), target.getId(), state, hit, resolved.weapon(), lost, rules, attacker);
+		boolean lethal = target.isDeadOrDying();
+		float damage = lethal ? Math.max(lost, dealt) : lost;
+		List<byte[]> messages = book.hit(target.getUUID(), target.getId(), state, hit, resolved.weapon(), damage, lethal, rules, attacker);
 		if (player && book.get(target.getUUID()) != null) PLAYERS.add(target.getUUID());
 		for (byte[] message : messages) broadcast(target, message);
 		Consequences.apply(target, source, state, wasLegless, wasHeadless, rules);
 		if (!wasHeadless && state.headless() && attacker >= 0 && "freeze".equalsIgnoreCase(rules.getKillCamThreats())) {
 			Consequences.freeze(threats, rules);
 		}
+	}
+
+	/**
+	 * A mob died: it stays on the ground as a body for the clients with the mod, falling away from the last blow.
+	 * The server forgets nothing early: the wounds go when the entity is removed, as before.
+	 */
+	public static void onDied(LivingEntity target, DamageSource source, float damage) {
+		if (book == null || config == null || target instanceof Player) return;
+		WoundRules rules = config.getRules();
+		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0) return;
+		if (profiles.forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString()) == null) return;
+		Vec3 push = Vec3.ZERO;
+		Entity by = source.getDirectEntity() != null ? source.getDirectEntity() : source.getEntity();
+		if (by != null && by != target) push = target.position().subtract(by.position());
+		else if (source.getSourcePosition() != null) push = target.position().subtract(source.getSourcePosition());
+		if (push.horizontalDistanceSqr() < 1e-6) push = target.getDeltaMovement();
+		if (push.horizontalDistanceSqr() < 1e-6) push = Vec3.directionFromRotation(0, target.yBodyRot + 180);
+		push = new Vec3(push.x, 0, push.z).normalize();
+		float strength = (float) Math.min(1.5, 0.25 + damage / 20.0);
+		byte[] message = Protocol.corpse(target.getId(), (float) push.x, (float) push.z, strength, RANDOM.nextInt(),
+				(int) Math.round(rules.getCorpseSeconds() * 20));
+		broadcast(target, message);
 	}
 
 	/**
@@ -231,6 +278,30 @@ public final class ChopServer {
 			if (entity == null || entity.distanceToSqr(player) > RESEND_RANGE * RESEND_RANGE) continue;
 			send(player, Protocol.state(entity.getId(), book.get(id)));
 		}
+	}
+
+	// for the public API (ru.deelter.chopchop.api), not for other mods directly
+
+	public static void broadcastApi(Entity entity, byte[] message) {
+		broadcast(entity, message);
+	}
+
+	public static WoundBook book() {
+		return book;
+	}
+
+	public static Profiles profilesApi() {
+		return profiles;
+	}
+
+	public static BodyPose pose(LivingEntity entity, WoundState state) {
+		return FabricHits.pose(entity).crawling(state, rules());
+	}
+
+	public static void consequences(LivingEntity target, DamageSource source, WoundState state, boolean wasLegless, boolean wasHeadless) {
+		if (config == null) return;
+		if (target instanceof Player && book.get(target.getUUID()) != null) PLAYERS.add(target.getUUID());
+		Consequences.apply(target, source, state, wasLegless, wasHeadless, config.getRules());
 	}
 
 	private static void broadcast(Entity entity, byte[] message) {
