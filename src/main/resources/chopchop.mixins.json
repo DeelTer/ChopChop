@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "ru.deelter.chopchop.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"LivingEntityHurtMixin",
+		"MobAiMixin",
+		"PlayerPoseMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

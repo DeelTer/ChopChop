@@ -1,0 +1,42 @@
+{
+	"schemaVersion": 1,
+	"id": "chopchop",
+	"version": "${version}",
+	"name": "ChopChop",
+	"description": "Cartoon voxel wounds and severed limbs for players and mobs, decided by the server and drawn by every client",
+	"authors": [
+		"DeelTer"
+	],
+	"contact": {},
+	"license": "All-Rights-Reserved",
+	"icon": "assets/chopchop/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"ru.deelter.chopchop.ChopChop"
+		],
+		"client": [
+			"ru.deelter.chopchop.client.ChopChopClient"
+		],
+		"modmenu": [
+			"ru.deelter.chopchop.client.gui.ModMenuIntegration"
+		]
+	},
+	"mixins": [
+		"chopchop.mixins.json",
+		{
+			"config": "chopchop.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=${loader_version}",
+		"fabric-api": "*",
+		"minecraft": "${minecraft_version}"
+	},
+	"suggests": {
+		"cloth-config": "*",
+		"modmenu": "*",
+		"modelinteractions": "*"
+	}
+}

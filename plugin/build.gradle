@@ -1,0 +1,58 @@
+plugins {
+    id 'java'
+}
+
+// the Paper backend: the same wound rules and protocol as the Fabric server, on Bukkit events
+version = rootProject.mod_version
+group = rootProject.maven_group
+
+base {
+    archivesName = 'chopchop-paper'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'PaperMC'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+dependencies {
+    compileOnly "io.papermc.paper:paper-api:${rootProject.paper_api_version}"
+    compileOnly "org.projectlombok:lombok:${rootProject.lombok_version}"
+    annotationProcessor "org.projectlombok:lombok:${rootProject.lombok_version}"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir rootProject.file('src/shared/java')
+        }
+        resources {
+            srcDir rootProject.file('src/shared/resources')
+        }
+    }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand 'version': project.version
+    }
+}
+
+jar {
+    // next to the jars of the mod
+    destinationDirectory = rootProject.layout.buildDirectory.dir('libs')
+}

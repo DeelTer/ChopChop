@@ -1,0 +1,96 @@
+package ru.deelter.chopchop.client.config;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import lombok.Getter;
+import lombok.Setter;
+import net.fabricmc.loader.api.FabricLoader;
+import ru.deelter.chopchop.ChopChop;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/**
+ * {@code config/chopchop-client.json}: how this client draws what the server decided. Nothing here changes the
+ * wounds themselves.
+ */
+@Getter
+@Setter
+public final class ClientConfig {
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	private static ClientConfig instance = new ClientConfig();
+
+	private boolean enabled = true;
+	private boolean particles = true;
+	/**
+	 * multiplies the number of particles
+	 */
+	private double particleAmount = 1.0;
+	private boolean sounds = true;
+	private double soundVolume = 1.0;
+	private boolean debris = true;
+	private int debrisSeconds = 6;
+	private boolean bones = true;
+	private boolean firstPerson = true;
+	private boolean hideItems = true;
+	private int maxDistance = 64;
+	/**
+	 * the camera rides in your head when it comes off
+	 */
+	private boolean headCam = true;
+	/**
+	 * seconds of the head cam before the death screen comes up
+	 */
+	private double headCamSeconds = 5.0;
+	/**
+	 * blood squirting from fresh stumps
+	 */
+	private boolean fountains = true;
+	/**
+	 * when you take a head, the camera swings around it for a moment
+	 */
+	private boolean killCam = true;
+	private double killCamSeconds = 2.5;
+
+	public static ClientConfig get() {
+		return instance;
+	}
+
+	public static Path file() {
+		return FabricLoader.getInstance().getConfigDir().resolve("chopchop-client.json");
+	}
+
+	public static void load() {
+		Path file = file();
+		if (Files.exists(file)) {
+			try (Reader reader = Files.newBufferedReader(file)) {
+				ClientConfig read = GSON.fromJson(reader, ClientConfig.class);
+				if (read != null) instance = read;
+			} catch (IOException | RuntimeException e) {
+				ChopChop.LOG.error("Can't read {}, using the defaults", file, e);
+			}
+		}
+		instance.clamp();
+		save();
+	}
+
+	public static void save() {
+		try (Writer writer = Files.newBufferedWriter(file())) {
+			GSON.toJson(instance, writer);
+		} catch (IOException e) {
+			ChopChop.LOG.warn("Can't write {}", file(), e);
+		}
+	}
+
+	private void clamp() {
+		particleAmount = Math.clamp(particleAmount, 0, 4);
+		soundVolume = Math.clamp(soundVolume, 0, 2);
+		debrisSeconds = Math.clamp(debrisSeconds, 1, 60);
+		maxDistance = Math.clamp(maxDistance, 8, 256);
+		headCamSeconds = Math.clamp(headCamSeconds, 0, 15);
+		killCamSeconds = Math.clamp(killCamSeconds, 0.5, 6);
+	}
+}

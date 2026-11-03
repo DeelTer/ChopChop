@@ -1,0 +1,176 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.18.2'
+}
+
+// the versions of Minecraft and of the mods built against depend on the Minecraft version that is built for
+def versionFile = file("versions/${project.mc}.properties")
+if (!versionFile.exists()) {
+    throw new GradleException("No versions/${project.mc}.properties, can't build for Minecraft ${project.mc}")
+}
+def versionProperties = new Properties()
+versionFile.withInputStream { versionProperties.load(it) }
+versionProperties.each { key, value -> project.ext.set(key, value) }
+
+version = "${project.mod_version}+${project.minecraft_version}"
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+sourceSets {
+    main {
+        java {
+            // wound rules, body profiles and protocol: the same source the Paper plugin is built with
+            srcDir 'src/shared/java'
+        }
+        resources {
+            srcDir 'src/shared/resources'
+        }
+    }
+}
+
+// one build gives everything: the mod and the server plugin
+tasks.named('build') {
+    dependsOn ':plugin:build'
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "chopchop" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+
+    // Every Minecraft version runs in a folder of its own, a world opened in a newer one can't go back
+    def usualVersion = new Properties()
+    file("gradle.properties").withInputStream { usualVersion.load(it) }
+    runs.configureEach {
+        runDir = project.mc == usualVersion.mc ? "run" : "run-${project.mc}"
+    }
+}
+
+// The few classes that can't be the same for every Minecraft version, like the first person hands: 26.3 moved
+// them into a renderer of their own. One folder per version, next to what they all share
+sourceSets {
+    client {
+        java {
+            srcDir "src/client/java-${project.mc}"
+        }
+    }
+}
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    compileOnly "org.projectlombok:lombok:${project.lombok_version}"
+    annotationProcessor "org.projectlombok:lombok:${project.lombok_version}"
+    clientCompileOnly "org.projectlombok:lombok:${project.lombok_version}"
+    clientAnnotationProcessor "org.projectlombok:lombok:${project.lombok_version}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+    // optional, for the settings screen. -PnoCloth runs the game without it, to try the fallback
+    if (project.hasProperty("noCloth")) {
+        clientCompileOnly "maven.modrinth:cloth-config:${project.cloth_config_version}"
+    } else {
+        clientImplementation "maven.modrinth:cloth-config:${project.cloth_config_version}"
+    }
+    // optional, to open the settings screen from the mod list
+    clientCompileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// runClientGameTest starts the game, builds a world, hurts a zombie and the player, and takes screenshots into
+// build/run/clientGameTest/screenshots
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = "chopchop-gametest"
+        enableGameTests = false
+        enableClientGameTests = true
+        eula = true
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "loader_version": project.loader_version
+    }
+}
+
+def targetJavaVersion = 25
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release.set(targetJavaVersion)
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    withSourcesJar()
+}
+
+// buildAll builds for every Minecraft version there is a file for in versions/, one after the other
+def minecraftVersions = fileTree("versions").matching { include "*.properties" }.files
+        .collect { it.name - ".properties" }.sort()
+def versionBuilds = []
+minecraftVersions.each { minecraftVersion ->
+    def previous = versionBuilds.empty ? null : versionBuilds.last()
+    versionBuilds << tasks.register("build_${minecraftVersion.replace('.', '_')}", GradleBuild) {
+        group = "build"
+        description = "Builds for Minecraft ${minecraftVersion}"
+        buildName = "chopchop-${minecraftVersion.replace('.', '-')}"
+        tasks = ["build"]
+        startParameter.projectProperties = [mc: minecraftVersion]
+        if (previous != null) {
+            mustRunAfter previous
+        }
+    }
+}
+tasks.register("buildAll") {
+    group = "build"
+    description = "Builds for every supported Minecraft version"
+    dependsOn versionBuilds
+}
+
+// gradlew runClientGameTest -PpaperPort=25599 -PpaperConsole=run-paper/cmd.txt: the client tests against a Paper
+// server with the plugin instead of singleplayer
+if (project.hasProperty("paperPort")) {
+    loom.runs.matching { it.name == "clientGameTest" }.configureEach {
+        vmArg "-Dchopchop.paperPort=${project.paperPort}"
+        vmArg "-Dchopchop.paperConsole=${file(project.paperConsole).absolutePath}"
+    }
+}

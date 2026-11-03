@@ -1,0 +1,23 @@
+{
+  "subtitles.chopchop.body.chop": "Мягкий шлёп",
+  "subtitles.chopchop.body.sever": "Конечность отлетает",
+  "chopchop.config.title": "ChopChop",
+  "chopchop.config.visual": "Внешний вид",
+  "chopchop.config.enabled": "Рисовать раны",
+  "chopchop.config.particles": "Частицы крови",
+  "chopchop.config.particleAmount": "Количество частиц",
+  "chopchop.config.sounds": "Звуки",
+  "chopchop.config.soundVolume": "Громкость звуков",
+  "chopchop.config.debris": "Отрубленные части падают",
+  "chopchop.config.debrisSeconds": "Отрубленные части лежат, секунд",
+  "chopchop.config.bones": "Кости в обрубках",
+  "chopchop.config.firstPerson": "Раны на своих руках",
+  "chopchop.config.hideItems": "Прятать предметы в отрубленной руке",
+  "chopchop.config.maxDistance": "Мелкие раны видны до, блоков",
+  "chopchop.config.headCam": "Камера в отрубленной голове",
+  "chopchop.config.headCamSeconds": "Камера головы до экрана смерти, секунд",
+  "chopchop.config.fountains": "Фонтанчики крови из свежих обрубков",
+  "chopchop.config.killCam": "Kill-cam, когда отрубаешь голову",
+  "chopchop.config.killCamSeconds": "Длина kill-cam, десятые секунды",
+  "chopchop.config.noCloth": "Установите Cloth Config, чтобы менять настройки здесь. Файл: config/chopchop-client.json"
+}

@@ -1,0 +1,23 @@
+{
+  "subtitles.chopchop.body.chop": "Squishy chop",
+  "subtitles.chopchop.body.sever": "Limb pops off",
+  "chopchop.config.title": "ChopChop",
+  "chopchop.config.visual": "Visuals",
+  "chopchop.config.enabled": "Draw wounds",
+  "chopchop.config.particles": "Blood particles",
+  "chopchop.config.particleAmount": "Particle amount",
+  "chopchop.config.sounds": "Sounds",
+  "chopchop.config.soundVolume": "Sound volume",
+  "chopchop.config.debris": "Severed limbs fall off",
+  "chopchop.config.debrisSeconds": "Severed limbs stay, seconds",
+  "chopchop.config.bones": "Bones in stumps",
+  "chopchop.config.firstPerson": "Wounds on your own hands",
+  "chopchop.config.hideItems": "Hide items in severed hands",
+  "chopchop.config.maxDistance": "Small wounds up to, blocks",
+  "chopchop.config.headCam": "Camera in your head when it comes off",
+  "chopchop.config.headCamSeconds": "Head camera before the death screen, seconds",
+  "chopchop.config.fountains": "Blood squirting from fresh stumps",
+  "chopchop.config.killCam": "Kill cam when you take a head",
+  "chopchop.config.killCamSeconds": "Kill cam length, tenths of a second",
+  "chopchop.config.noCloth": "Install Cloth Config to change settings here. The file is config/chopchop-client.json"
+}

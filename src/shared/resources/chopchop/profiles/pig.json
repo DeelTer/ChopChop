@@ -1,0 +1,20 @@
+{
+  "id": "pig",
+  "entities": ["minecraft:pig"],
+  "material": "meat",
+  "height": 24,
+  "crawl": {"pitch": 0, "lift": -0.375, "shift": 0},
+  "parts": [
+    {"name": "head", "pivot": [0, 12, -6], "box": [-4, -4, -8, 4, 4, 0], "boneScale": 0.4,
+      "segments": [{"name": "neck", "cut": 0, "hits": 3}]},
+    {"name": "body", "pivot": [0, 11, 2], "rot": [1.5707964, 0, 0], "box": [-5, -10, -7, 5, 6, 1]},
+    {"name": "right_hind_leg", "leg": true, "pivot": [-3, 18, 7], "box": [-2, 0, -2, 2, 6, 2], "boneScale": 0.3,
+      "segments": [{"name": "leg", "cut": 2, "durability": 6}]},
+    {"name": "left_hind_leg", "leg": true, "pivot": [3, 18, 7], "box": [-2, 0, -2, 2, 6, 2], "boneScale": 0.3,
+      "segments": [{"name": "leg", "cut": 2, "durability": 6}]},
+    {"name": "right_front_leg", "leg": true, "pivot": [-3, 18, -5], "box": [-2, 0, -2, 2, 6, 2], "boneScale": 0.3,
+      "segments": [{"name": "leg", "cut": 2, "durability": 6}]},
+    {"name": "left_front_leg", "leg": true, "pivot": [3, 18, -5], "box": [-2, 0, -2, 2, 6, 2], "boneScale": 0.3,
+      "segments": [{"name": "leg", "cut": 2, "durability": 6}]}
+  ]
+}

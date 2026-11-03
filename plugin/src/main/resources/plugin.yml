@@ -1,0 +1,15 @@
+name: ChopChop
+version: '${version}'
+main: ru.deelter.chopchop.paper.ChopPlugin
+api-version: '1.21.4'
+author: DeelTer
+description: Server side of the ChopChop mod, cartoon wounds and severed limbs
+commands:
+  chopchop:
+    description: Manage ChopChop
+    usage: /chopchop <reload|stats|heal [player]>
+    permission: chopchop.admin
+permissions:
+  chopchop.admin:
+    description: Use /chopchop
+    default: op

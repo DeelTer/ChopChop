@@ -1,0 +1,60 @@
+{
+  "body.chop": {
+    "subtitle": "subtitles.chopchop.body.chop",
+    "sounds": [
+      {
+        "name": "chopchop:body/chop_01",
+        "volume": 0.75,
+        "weight": 1,
+        "stream": false
+      },
+      {
+        "name": "chopchop:body/chop_02",
+        "volume": 0.75,
+        "weight": 1,
+        "stream": false
+      },
+      {
+        "name": "chopchop:body/chop_03",
+        "volume": 0.75,
+        "weight": 1,
+        "stream": false
+      },
+      {
+        "name": "chopchop:body/chop_04",
+        "volume": 0.75,
+        "weight": 1,
+        "stream": false
+      }
+    ]
+  },
+  "body.sever": {
+    "subtitle": "subtitles.chopchop.body.sever",
+    "sounds": [
+      {
+        "name": "chopchop:body/sever_01",
+        "volume": 0.85,
+        "weight": 1,
+        "stream": false
+      },
+      {
+        "name": "chopchop:body/sever_02",
+        "volume": 0.85,
+        "weight": 1,
+        "stream": false
+      },
+      {
+        "name": "chopchop:body/sever_03",
+        "volume": 0.85,
+        "weight": 1,
+        "stream": false
+      },
+      {
+        "name": "chopchop:body/sever_04",
+        "volume": 0.85,
+        "weight": 1,
+        "stream": false
+      }
+    ]
+  }
+}

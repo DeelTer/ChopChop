@@ -1,0 +1,16 @@
+{
+	"schemaVersion": 1,
+	"id": "chopchop-gametest",
+	"version": "1.0.0",
+	"name": "ChopChop game tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"ru.deelter.chopchop.gametest.ChopClientGameTest",
+			"ru.deelter.chopchop.gametest.PaperClientGameTest"
+		]
+	},
+	"depends": {
+		"chopchop": "*"
+	}
+}

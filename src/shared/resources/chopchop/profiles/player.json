@@ -1,0 +1,19 @@
+{
+  "id": "player",
+  "entities": ["minecraft:player", "minecraft:mannequin"],
+  "material": "meat",
+  "height": 32,
+  "parts": [
+    {"name": "head", "pivot": [0, 0, 0], "box": [-4, -8, -4, 4, 0, 4], "overlays": ["hat"], "boneScale": 0.45,
+      "segments": [{"name": "neck", "cut": 0, "hits": 3}]},
+    {"name": "body", "pivot": [0, 0, 0], "box": [-4, 0, -2, 4, 12, 2], "overlays": ["jacket"]},
+    {"name": "right_arm", "pivot": [-5, 2, 0], "box": [-3, -2, -2, 1, 10, 2], "overlays": ["right_sleeve"], "hand": "right",
+      "segments": [{"name": "upper", "cut": 3, "durability": 14}, {"name": "lower", "cut": 7, "durability": 9}]},
+    {"name": "left_arm", "pivot": [5, 2, 0], "box": [-1, -2, -2, 3, 10, 2], "overlays": ["left_sleeve"], "hand": "left",
+      "segments": [{"name": "upper", "cut": 3, "durability": 14}, {"name": "lower", "cut": 7, "durability": 9}]},
+    {"name": "right_leg", "leg": true, "pivot": [-1.9, 12, 0], "box": [-2, 0, -2, 2, 12, 2], "overlays": ["right_pants"],
+      "segments": [{"name": "upper", "cut": 3, "durability": 16}, {"name": "lower", "cut": 7, "durability": 10}]},
+    {"name": "left_leg", "leg": true, "pivot": [1.9, 12, 0], "box": [-2, 0, -2, 2, 12, 2], "overlays": ["left_pants"],
+      "segments": [{"name": "upper", "cut": 3, "durability": 16}, {"name": "lower", "cut": 7, "durability": 10}]}
+  ]
+}

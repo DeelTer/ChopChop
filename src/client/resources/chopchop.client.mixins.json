@@ -1,0 +1,24 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "ru.deelter.chopchop.mixin.client",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"AvatarRendererMixin",
+		"CameraMixin",
+		"CubeMixin",
+		"EntityRenderStateMixin",
+		"ItemInHandLayerMixin",
+		"KeyboardInputMixin",
+		"FirstPersonItemsMixin",
+		"GuiMixin",
+		"HeadlessHeadLayerMixin",
+		"LivingEntityRendererMixin",
+		"ModelFeatureRendererMixin",
+		"ModelPartAccessor",
+		"RenderTypeFeatureRendererInvoker"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

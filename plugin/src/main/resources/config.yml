@@ -1,0 +1,68 @@
+# ChopChop server rules. The same rules as config/chopchop-server.json of a Fabric server.
+enabled: true
+players: true
+mobs: true
+wounds:
+  # chance that a hit carves a wound
+  chance: 0.75
+  # radius in voxels (about a pixel each): base + per point of damage, at most max
+  radius-base: 1.0
+  radius-per-damage: 0.12
+  radius-max: 2.4
+  # how deep under the surface wounds may go, voxels
+  max-depth: 1
+  # swords and axes cut a scar along the swing instead of a round hole: length in voxels and width
+  slash-length-base: 2.5
+  slash-length-per-damage: 0.35
+  slash-length-max: 7.0
+  slash-width: 0.85
+  # a part never loses more than this share to wounds
+  max-carved-share: 0.45
+severing:
+  enabled: true
+  # chance a segment comes off once its durability (in the profile) is used up
+  chance: 0.4
+  durability-multiplier: 1.0
+  # a single hit weaker than this never severs
+  min-damage: 4.0
+  # heads come off after three chops of a sword or an axe (the count is in the profile)
+  heads: true
+  # a body without its head dies: a player at once, a mob after running around blind
+  decapitation-kills: true
+  headless-seconds: 3.0
+  # a headless player stands this long before falling, watched from the flying head
+  headless-player-seconds: 2.0
+  # what the last leg does: crawl (comes off, the body crawls), protect (never comes off), none
+  legless: crawl
+  # a mob without legs: lie (still, AI off, head follows the nearest player) or crawl (after its target, slower)
+  legless-mobs: lie
+  # chops to take the head of a body lying without legs
+  legless-head-hits: 1
+  # speed of a crawling mob (legless-mobs: crawl), share of its usual speed
+  crawl-speed: 0.35
+explosions:
+  # blasts tear the side of the body facing them; above sever-damage limbs fly off, the closer the more
+  enabled: true
+  wounds: 5
+  sever-damage: 8.0
+  sever-chance-per-damage: 0.06
+  # a player killed by a blast always loses the head, thrown away from the blast
+  death-takes-head: true
+kill-cam:
+  # monsters after the killer within threat-radius: skip (no kill cam), freeze (they stand still), ignore
+  threats: skip
+  threat-radius: 8.0
+  freeze-seconds: 2.5
+# skip or coarse: what falls and other damage without a hit point do (explosions have their own rules)
+other-sources: skip
+# player wounds survive a restart (stored in the player data). Off: until respawn or restart
+persist-players: false
+weapons:
+  sword: {wound-chance: 1.0, wound-size: 1.0, sever: 1.0}
+  axe: {wound-chance: 1.0, wound-size: 1.25, sever: 1.4}
+  trident: {wound-chance: 1.0, wound-size: 1.1, sever: 0.0}
+  arrow: {wound-chance: 0.9, wound-size: 0.8, sever: 0.0}
+  blunt: {wound-chance: 0.45, wound-size: 0.8, sever: 0.0}
+  other: {wound-chance: 0.5, wound-size: 1.0, sever: 0.0}
+# entity type -> profile id, "" turns a type off
+entity-profiles: {}
