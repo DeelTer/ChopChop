@@ -1,0 +1,180 @@
+{
+  "id": "sheep",
+  "entities": [
+    "minecraft:sheep"
+  ],
+  "material": "meat",
+  "height": 24,
+  "crawl": {
+    "pitch": 0,
+    "lift": -0.75,
+    "shift": 0
+  },
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        6,
+        -8
+      ],
+      "box": [
+        -3,
+        -4,
+        -6,
+        3,
+        2,
+        2
+      ],
+      "boneScale": 0.4,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 3
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        5,
+        2
+      ],
+      "rot": [
+        1.5707964,
+        0,
+        0
+      ],
+      "box": [
+        -4,
+        -10,
+        -7,
+        4,
+        6,
+        -1
+      ]
+    },
+    {
+      "name": "right_hind_leg",
+      "pivot": [
+        -3,
+        12,
+        7
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        12,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 4,
+          "durability": 9
+        },
+        {
+          "name": "lower",
+          "cut": 8,
+          "durability": 6
+        }
+      ]
+    },
+    {
+      "name": "left_hind_leg",
+      "pivot": [
+        3,
+        12,
+        7
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        12,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 4,
+          "durability": 9
+        },
+        {
+          "name": "lower",
+          "cut": 8,
+          "durability": 6
+        }
+      ]
+    },
+    {
+      "name": "right_front_leg",
+      "pivot": [
+        -3,
+        12,
+        -5
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        12,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 4,
+          "durability": 9
+        },
+        {
+          "name": "lower",
+          "cut": 8,
+          "durability": 6
+        }
+      ]
+    },
+    {
+      "name": "left_front_leg",
+      "pivot": [
+        3,
+        12,
+        -5
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        12,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 4,
+          "durability": 9
+        },
+        {
+          "name": "lower",
+          "cut": 8,
+          "durability": 6
+        }
+      ]
+    }
+  ]
+}

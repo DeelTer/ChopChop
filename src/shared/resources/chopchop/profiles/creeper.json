@@ -1,0 +1,155 @@
+{
+  "id": "creeper",
+  "entities": [
+    "minecraft:creeper"
+  ],
+  "material": "meat",
+  "height": 26,
+  "crawl": {
+    "pitch": 0,
+    "lift": -0.375,
+    "shift": 0
+  },
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        6,
+        0
+      ],
+      "box": [
+        -4,
+        -8,
+        -4,
+        4,
+        0,
+        4
+      ],
+      "boneScale": 0.45,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 3
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        6,
+        0
+      ],
+      "box": [
+        -4,
+        0,
+        -2,
+        4,
+        12,
+        2
+      ]
+    },
+    {
+      "name": "right_hind_leg",
+      "pivot": [
+        -2,
+        18,
+        4
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        6,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 3,
+          "durability": 6
+        }
+      ]
+    },
+    {
+      "name": "left_hind_leg",
+      "pivot": [
+        2,
+        18,
+        4
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        6,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 3,
+          "durability": 6
+        }
+      ]
+    },
+    {
+      "name": "right_front_leg",
+      "pivot": [
+        -2,
+        18,
+        -4
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        6,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 3,
+          "durability": 6
+        }
+      ]
+    },
+    {
+      "name": "left_front_leg",
+      "pivot": [
+        2,
+        18,
+        -4
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        6,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.3,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 3,
+          "durability": 6
+        }
+      ]
+    }
+  ]
+}

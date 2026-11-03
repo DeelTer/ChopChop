@@ -36,7 +36,7 @@ class CoreTest {
 		assertNotNull(PROFILES.forEntity("minecraft:zombie"));
 		assertEquals("bone", PROFILES.forEntity("minecraft:skeleton").getMaterial());
 		assertNotNull(PROFILES.forEntity("minecraft:pig"));
-		assertNull(PROFILES.forEntity("minecraft:creeper"));
+		assertNull(PROFILES.forEntity("minecraft:bat"), "a type without a profile has no body");
 	}
 
 	@Test
@@ -718,5 +718,34 @@ class CoreTest {
 		// the living state sent late is older: a client drops it and keeps the head off
 		var late = (Protocol.Message.State) Protocol.readClientbound(Protocol.state(5, living), PROFILES);
 		assertTrue(late.state().getRevision() < sent.state().getRevision());
+	}
+
+	/**
+	 * Every profile stands on the ground (the lowest corner of its parts at model y 24, where the game puts the
+	 * feet) and is hit by a blow from the front: what a mistake in a profile's numbers shows first.
+	 */
+	@Test
+	void everyProfileStandsAndCanBeHit() {
+		for (String id : new String[]{"player", "humanoid", "zombie", "skeleton", "pig", "horse", "skeleton_horse", "cow", "sheep", "creeper",
+				"enderman", "iron_golem", "villager", "illager", "witch", "zombie_villager", "spider", "chicken"}) {
+			BodyProfile profile = PROFILES.byId(id);
+			if (profile == null) continue;
+			double lowest = -1e9, highest = 1e9;
+			for (int i = 0; i < profile.getParts().size(); i++) {
+				var part = profile.part(i);
+				var m = HitLocator.partToModel(profile, part);
+				float[] b = part.getBox();
+				for (int c = 0; c < 8; c++) {
+					var corner = m.transformPosition(new Vector3d((c & 1) == 0 ? b[0] : b[3], (c & 2) == 0 ? b[1] : b[4], (c & 4) == 0 ? b[2] : b[5]));
+					lowest = Math.max(lowest, corner.y);
+					highest = Math.min(highest, corner.y);
+				}
+			}
+			assertEquals(24, lowest, 2.5, id + " stands on the ground");
+			WoundState state = new WoundState(profile);
+			double middle = 64 + (24 - (lowest + highest) / 2) / 16;
+			Hit hit = HitLocator.castOrNearest(state, SOUTH, 0, middle, 4, 0, 0, -1, 8);
+			assertNotNull(hit, id + " is hit from the front");
+		}
 	}
 }

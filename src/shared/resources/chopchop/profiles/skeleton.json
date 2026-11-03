@@ -1,6 +1,6 @@
 {
   "id": "skeleton",
-  "entities": ["minecraft:skeleton", "minecraft:stray", "minecraft:bogged"],
+  "entities": ["minecraft:skeleton", "minecraft:stray", "minecraft:bogged", "minecraft:wither_skeleton"],
   "material": "bone",
   "height": 32,
   "crawl": {"pitch": -90, "lift": 0.125, "shift": 1.375},
