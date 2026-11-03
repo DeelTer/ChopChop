@@ -612,4 +612,40 @@ class CoreTest {
 		for (int i = 0; i < 1000; i++) if (skull.patch(i % 10, i / 10 % 10, i / 100)) patches++;
 		assertTrue(patches > 150 && patches < 350, "about a quarter of the skull shows meat: " + patches);
 	}
+
+	@Test
+	void bareHandedMobsTearAtTheWholeBody() {
+		BodyProfile profile = PROFILES.byId("player");
+		WoundState state = new WoundState(profile);
+		Random random = new Random(11);
+		java.util.Map<String, Integer> parts = new java.util.HashMap<>();
+		// a zombie in front of the player, its eyes at the height of the player's
+		double ex = 0, ey = 65.62, ez = 1.2;
+		for (int i = 0; i < 400; i++) {
+			double[] at = ru.deelter.chopchop.core.hit.MobAim.spread(random, 0.6, 1.8);
+			double dx = at[0] - ex, dy = 64 + at[1] - ey, dz = at[2] - ez;
+			double l = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			Hit hit = HitLocator.castOrNearest(state, SOUTH, ex, ey, ez, dx / l, dy / l, dz / l, 3);
+			parts.merge(profile.part(hit.part()).getName(), 1, Integer::sum);
+		}
+		int head = parts.getOrDefault("head", 0);
+		assertTrue(head < 120, "the head is not every bite: " + parts);
+		assertTrue(parts.getOrDefault("body", 0) > 60, "the chest takes most: " + parts);
+		assertTrue(parts.getOrDefault("right_arm", 0) + parts.getOrDefault("left_arm", 0) > 20, "arms too: " + parts);
+		assertTrue(parts.getOrDefault("right_leg", 0) + parts.getOrDefault("left_leg", 0) > 40, "legs too: " + parts);
+	}
+
+	@Test
+	void corpsesCanBeCutByTheApi() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundState body = new WoundState(profile);
+		int arm = profile.part("right_arm").getIndex();
+		assertEquals(2, WoundBook.severCorpse(-3, body, arm, 6, false).size());
+		assertEquals(6, body.part(arm).getSeveredAt());
+		assertTrue(WoundBook.severCorpse(-3, body, arm, 9, false).isEmpty());
+		int chest = profile.part("body").getIndex();
+		assertEquals(2, WoundBook.woundCorpse(-3, body, chest, 5, 3, 1.2, 1).size());
+		assertTrue(body.part(chest).carvedCount() > 0);
+		for (int x = 0; x < 8; x++) for (int y = 0; y < 12; y++) assertFalse(body.part(chest).carved(x, y, 3), "never the back");
+	}
 }

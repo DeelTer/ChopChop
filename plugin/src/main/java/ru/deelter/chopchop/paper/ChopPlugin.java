@@ -102,6 +102,40 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		}
 	}
 
+	/**
+	 * The bodies lying in a world within an area, by id: for the API.
+	 */
+	Map<Integer, Location> corpsesApi(org.bukkit.World world, org.bukkit.util.BoundingBox area) {
+		Map<Integer, Location> found = new LinkedHashMap<>();
+		long now = world.getFullTime();
+		corpses.forEach((id, c) -> {
+			if (c.world() == world && c.until() >= now && area.contains(c.at())) found.put(id, c.at().toLocation(world));
+		});
+		return found;
+	}
+
+	/**
+	 * Cuts ({@code wound} null) or wounds a body, for the API.
+	 */
+	boolean changeCorpseApi(int id, String partName, double along, boolean fling, double[] wound) {
+		Corpse corpse = corpses.get(id);
+		if (corpse == null || corpse.until() < corpse.world().getFullTime()) return false;
+		var part = corpse.state().getProfile().part(partName);
+		if (part == null) return false;
+		int row = ru.deelter.chopchop.core.api.BodyOps.rowAt(part, along);
+		List<byte[]> messages = wound == null
+				? WoundBook.severCorpse(id, corpse.state(), part.getIndex(), row, fling)
+				: WoundBook.woundCorpse(id, corpse.state(), part.getIndex(), row, wound[0], wound[1], (int) wound[2]);
+		for (byte[] message : messages) {
+			for (Player near : corpse.world().getPlayers()) {
+				if (modded.contains(near.getUniqueId()) && near.getLocation().toVector().distanceSquared(corpse.at()) < RESEND_RANGE * RESEND_RANGE) {
+					send(near, message);
+				}
+			}
+		}
+		return !messages.isEmpty();
+	}
+
 	private Protocol.Aim takeAim(Player player, Entity target) {
 		PendingAim pending = aims.remove(player.getUniqueId());
 		if (pending == null || pending.aim().entityId() != target.getEntityId()) return null;
@@ -437,10 +471,18 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 				AttributeInstance range = living.getAttribute(Attribute.ENTITY_INTERACTION_RANGE);
 				reach = (range == null ? 3.0 : range.getValue()) + 1.5;
 			} else {
-				// a mob hits where it looks when it looks at the target (zombies look you in the eyes), the middle otherwise
 				Vector center = target.getBoundingBox().getCenter();
-				Vector toCenter = center.clone().subtract(eye.toVector()).normalize();
-				dir = eye.getDirection().dot(toCenter) > 0.85 ? eye.getDirection() : toCenter;
+				ItemStack held = living.getEquipment() == null ? null : living.getEquipment().getItemInMainHand();
+				if (classify(held).edged()) {
+					// a blade goes where the mob looks (zombies look you in the eyes): heads fly
+					Vector toCenter = center.clone().subtract(eye.toVector()).normalize();
+					dir = eye.getDirection().dot(toCenter) > 0.85 ? eye.getDirection() : toCenter;
+				} else {
+					// bare hands and teeth tear at the whole body
+					double[] at = ru.deelter.chopchop.core.hit.MobAim.spread(java.util.concurrent.ThreadLocalRandom.current(),
+							target.getWidth(), target.getHeight());
+					dir = target.getLocation().toVector().add(new Vector(at[0], at[1], at[2])).subtract(eye.toVector()).normalize();
+				}
 				reach = eye.toVector().distance(center) + 2;
 			}
 			Hit hit = null;

@@ -146,8 +146,13 @@ final class Consequences {
 	 */
 	static List<Mob> threats(Player killer, LivingEntity victim, WoundRules rules) {
 		double r = rules.getKillCamThreatRadius();
+		// not only the ones after the killer right now: any monster near that sees it, and whoever hit it a moment ago
+		LivingEntity lastHit = killer.getLastHurtByMob();
+		boolean justHit = lastHit != null && killer.tickCount - killer.getLastHurtByMobTimestamp() < 60;
 		return killer.level().getEntitiesOfClass(Mob.class, killer.getBoundingBox().inflate(r),
-				mob -> mob != victim && mob.isAlive() && mob.getTarget() == killer && mob.distanceToSqr(killer) <= r * r);
+				mob -> mob != victim && mob.isAlive() && mob.distanceToSqr(killer) <= r * r
+						&& (mob.getTarget() == killer || justHit && mob == lastHit
+						|| mob instanceof net.minecraft.world.entity.monster.Enemy && mob.hasLineOfSight(killer)));
 	}
 
 	/**

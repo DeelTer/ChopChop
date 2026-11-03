@@ -128,6 +128,64 @@ public final class WoundBook {
 	}
 
 	/**
+	 * Cuts a dead body (kept apart from the book) at a row: for the API.
+	 *
+	 * @return the messages, empty if nothing more came off
+	 */
+	public static List<byte[]> severCorpse(int corpseId, WoundState state, int part, int row, boolean flung) {
+		List<byte[]> messages = new ArrayList<>(2);
+		if (part < 0 || part >= state.partCount() || !state.part(part).sever(row)) return messages;
+		state.touch();
+		messages.add(Protocol.event(corpseId, flung ? Protocol.EVENT_BLAST : Protocol.EVENT_SEVER, part, cutCenter(state, part, row), row, -1));
+		messages.add(Protocol.state(corpseId, state));
+		return messages;
+	}
+
+	/**
+	 * A wound in a dead body at a row of a part, on its front: for the API (the server does not know how a body lies).
+	 *
+	 * @return the messages, empty if nothing was carved
+	 */
+	public static List<byte[]> woundCorpse(int corpseId, WoundState state, int part, int row, double halfLength, double radius, int depth) {
+		List<byte[]> messages = new ArrayList<>(2);
+		if (part < 0 || part >= state.partCount()) return messages;
+		var def = state.getProfile().part(part);
+		if (!def.isWoundable()) return messages;
+		PartStateAccess.Spot spot = PartStateAccess.front(state, def, Math.clamp(row, 0, def.gy() - 1));
+		if (spot == null) return messages;
+		Hit hit = new Hit(part, spot.x(), spot.y(), spot.z(), cutCenter(state, part, spot.y()), 0,
+				halfLength > 0 ? new float[]{0, 1, 0} : null, new float[]{0, 0, 1});
+		if (WoundEngine.carveAt(state.part(part), hit, hit.slash(), halfLength, radius, depth, 1.0) == 0) return messages;
+		state.touch();
+		messages.add(Protocol.event(corpseId, Protocol.EVENT_WOUND, part, hit.model(), -1, -1));
+		messages.add(Protocol.state(corpseId, state));
+		return messages;
+	}
+
+	/**
+	 * Finding a voxel that is still there on a row, for wounds without a ray.
+	 */
+	private static final class PartStateAccess {
+		record Spot(int x, int y, int z) {
+		}
+
+		/**
+		 * The first voxel still there from the front of the middle of a row inwards, then out from the middle.
+		 */
+		static Spot front(WoundState state, ru.deelter.chopchop.core.profile.BodyPart def, int row) {
+			var part = state.part(def.getIndex());
+			int mid = def.gx() / 2;
+			for (int dx = 0; dx < def.gx(); dx++) {
+				for (int sign = -1; sign <= 1; sign += 2) {
+					int x = Math.clamp(mid + (sign < 0 ? -dx : dx), 0, def.gx() - 1);
+					for (int z = 0; z < def.gz(); z++) if (!part.gone(x, row, z)) return new Spot(x, row, z);
+				}
+			}
+			return null;
+		}
+	}
+
+	/**
 	 * A copy of a body, for a dead one that must not change with the living entity of the same id.
 	 */
 	public WoundState copyOf(WoundState state, BodyProfile profile) {

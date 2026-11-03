@@ -116,6 +116,7 @@ public final class ChopChopClient implements ClientModInitializer {
 			case Protocol.Message.Hello hello -> {
 				serverSpeaks = hello.version() == Protocol.VERSION;
 				SERVER_RULES.setLegless((hello.flags() & Protocol.FLAG_CRAWL) != 0 ? "crawl" : "none");
+				SERVER_RULES.setKillCamThreats((hello.flags() & Protocol.FLAG_KILL_CAM_ANYWAY) != 0 ? "ignore" : "skip");
 				ChopChop.LOG.info("Server speaks ChopChop protocol {}", hello.version());
 			}
 			case Protocol.Message.State state -> ClientWounds.put(state.entityId(), state.state());

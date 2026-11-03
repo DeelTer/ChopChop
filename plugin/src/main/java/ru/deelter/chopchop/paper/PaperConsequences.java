@@ -121,8 +121,9 @@ final class PaperConsequences {
 		double r = rules.getKillCamThreatRadius();
 		java.util.List<Mob> list = new java.util.ArrayList<>();
 		for (Entity near : killer.getNearbyEntities(r, r, r)) {
-			if (near instanceof Mob mob && mob != victim && !mob.isDead() && killer.equals(mob.getTarget())
-					&& mob.getLocation().distanceSquared(killer.getLocation()) <= r * r) list.add(mob);
+			// not only the ones after the killer right now: any monster near that sees it
+			if (near instanceof Mob mob && mob != victim && !mob.isDead() && mob.getLocation().distanceSquared(killer.getLocation()) <= r * r
+					&& (killer.equals(mob.getTarget()) || mob instanceof Enemy && mob.hasLineOfSight(killer))) list.add(mob);
 		}
 		return list;
 	}

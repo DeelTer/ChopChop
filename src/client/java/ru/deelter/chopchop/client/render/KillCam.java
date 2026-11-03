@@ -46,8 +46,21 @@ public final class KillCam {
 	public static void expect(int entityId) {
 		ClientConfig config = ClientConfig.get();
 		if (!config.isKillCam() || !config.isDebris() || HeadCam.active() || HeadCam.expecting()) return;
+		// with monsters about, the head just flies and the camera stays: unless the server freezes them for it
+		if ("skip".equalsIgnoreCase(ru.deelter.chopchop.client.ChopChopClient.serverRules().getKillCamThreats()) && threatened(entityId)) return;
 		victim = entityId;
 		expecting = EXPECT_TICKS;
+	}
+
+	/**
+	 * A live monster within 12 blocks, the victim aside: a dying one, or a body on the ground, is no threat.
+	 */
+	private static boolean threatened(int victimId) {
+		var minecraft = net.minecraft.client.Minecraft.getInstance();
+		var player = minecraft.player;
+		if (player == null || minecraft.level == null) return false;
+		return !minecraft.level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, player.getBoundingBox().inflate(12),
+				mob -> mob.getId() != victimId && mob.isAlive() && mob instanceof net.minecraft.world.entity.monster.Enemy).isEmpty();
 	}
 
 	static void offer(Debris.Chunk head, int entityId) {

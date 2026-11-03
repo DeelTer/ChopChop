@@ -93,8 +93,16 @@ public final class Protocol {
 		});
 	}
 
+	/**
+	 * the server lets the kill cam play with monsters near (killCamThreats freeze or ignore): the client does not
+	 * hold it back itself
+	 */
+	public static final int FLAG_KILL_CAM_ANYWAY = 2;
+
 	public static int flags(ru.deelter.chopchop.core.rules.WoundRules rules) {
-		return rules.crawls() ? FLAG_CRAWL : 0;
+		int flags = rules.crawls() ? FLAG_CRAWL : 0;
+		if (!"skip".equalsIgnoreCase(rules.getKillCamThreats())) flags |= FLAG_KILL_CAM_ANYWAY;
+		return flags;
 	}
 
 	public static byte[] state(int entityId, WoundState state) {

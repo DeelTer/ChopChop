@@ -97,6 +97,14 @@ public final class ChopApiBridge {
 		return send(target, state, messages, attacker, state.legless(), state.headless());
 	}
 
+	public static java.util.Map<Integer, Location> corpses(org.bukkit.World world, org.bukkit.util.BoundingBox area) {
+		return plugin().corpsesApi(world, area);
+	}
+
+	public static boolean changeCorpse(int id, String part, double along, boolean fling, double[] wound) {
+		return plugin().changeCorpseApi(id, part, along, fling, wound);
+	}
+
 	public static void heal(LivingEntity entity) {
 		plugin().healApi(entity);
 	}

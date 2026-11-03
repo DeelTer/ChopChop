@@ -106,6 +106,29 @@ public final class ChopChopApi {
 		return ChopApiBridge.wound(target, spot.internal(), swing, shape.length(), shape.radius(), shape.depth(), attacker);
 	}
 
+	/**
+	 * Dead bodies lying in a world, by the id they go by, with where they fell (they fall and slide on the clients, so
+	 * a block or two off).
+	 */
+	public static java.util.Map<Integer, Location> corpses(org.bukkit.World world, org.bukkit.util.BoundingBox area) {
+		return ChopApiBridge.corpses(world, area);
+	}
+
+	/**
+	 * Cuts a dead body: the part off at {@code along}, falling as a piece. Only for the eye.
+	 */
+	public static boolean severCorpse(int corpseId, String part, double along, boolean fling) {
+		return ChopApiBridge.changeCorpse(corpseId, part, along, fling, null);
+	}
+
+	/**
+	 * A wound in a dead body on the front of a part at {@code along}; a cut runs along the part.
+	 */
+	public static boolean woundCorpse(int corpseId, String part, double along, WoundShape shape) {
+		double half = shape.swing() == null ? 0 : shape.length() / 2;
+		return ChopApiBridge.changeCorpse(corpseId, part, along, false, new double[]{half, shape.radius(), shape.depth()});
+	}
+
 	public static void heal(LivingEntity entity) {
 		ChopApiBridge.heal(entity);
 	}

@@ -70,10 +70,18 @@ final class FabricHits {
 				dir = player.getViewVector(1.0F);
 				reach = player.entityInteractionRange() + 1.5;
 			} else {
-				// a mob hits where it looks when it looks at the target (zombies look you in the eyes), the middle otherwise
-				Vec3 toCenter = target.getBoundingBox().getCenter().subtract(eye).normalize();
-				Vec3 look = living.getViewVector(1.0F);
-				dir = look.dot(toCenter) > 0.85 ? look : toCenter;
+				ItemStack held = living.getMainHandItem();
+				if (classify(held).edged()) {
+					// a blade goes where the mob looks (zombies look you in the eyes): heads fly
+					Vec3 toCenter = target.getBoundingBox().getCenter().subtract(eye).normalize();
+					Vec3 look = living.getViewVector(1.0F);
+					dir = look.dot(toCenter) > 0.85 ? look : toCenter;
+				} else {
+					// bare hands and teeth tear at the whole body
+					double[] at = ru.deelter.chopchop.core.hit.MobAim.spread(java.util.concurrent.ThreadLocalRandom.current(),
+							target.getBbWidth(), target.getBbHeight());
+					dir = target.position().add(at[0], at[1], at[2]).subtract(eye).normalize();
+				}
 				reach = eye.distanceTo(target.getBoundingBox().getCenter()) + 2;
 			}
 			Hit hit = null;

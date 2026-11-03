@@ -17,6 +17,7 @@ import ru.deelter.chopchop.server.ChopServer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiPredicate;
 
 /**
@@ -159,6 +160,36 @@ public final class ChopChopApi {
 		var messages = BodyOps.wound(ChopServer.book(), target.getUUID(), target.getId(), state, pose(target, state), spot.internal(), swing,
 				shape.length(), shape.radius(), shape.depth(), attacker == null ? -1 : attacker.getId());
 		return send(target, state, messages, attacker, state.legless(), state.headless());
+	}
+
+	/**
+	 * Dead bodies lying in a world, by the id they go by (the entity id of a mob, one of their own for players), with
+	 * where they fell. Bodies live on the clients and fall, slide and are thrown there, so where one lies now may be a
+	 * block or two off.
+	 */
+	public static Map<Integer, Vec3> corpses(net.minecraft.server.level.ServerLevel level, net.minecraft.world.phys.AABB area) {
+		return ChopServer.corpses(level, area);
+	}
+
+	/**
+	 * Cuts a dead body: the part off at {@code along}, falling as a piece. Bodies are only for the eye: no damage,
+	 * no drops, no kill cam.
+	 *
+	 * @return whether anything more came off
+	 */
+	public static boolean severCorpse(int corpseId, String part, double along, boolean fling) {
+		return ChopServer.changeCorpse(corpseId, part, along, fling, null);
+	}
+
+	/**
+	 * A wound in a dead body, on the front of a part at {@code along}. A swing direction is not used: the server does
+	 * not know how the body lies on each client; a cut ({@code shape.length() > 0}) runs along the part.
+	 *
+	 * @return whether anything was carved
+	 */
+	public static boolean woundCorpse(int corpseId, String part, double along, WoundShape shape) {
+		double half = shape.swing() == null ? 0 : shape.length() / 2;
+		return ChopServer.changeCorpse(corpseId, part, along, false, new double[]{half, shape.radius(), shape.depth()});
 	}
 
 	/**

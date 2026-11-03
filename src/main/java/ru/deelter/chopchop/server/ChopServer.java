@@ -127,6 +127,41 @@ public final class ChopServer {
 	}
 
 	/**
+	 * The bodies lying in a world within an area, by id: for the API.
+	 */
+	public static Map<Integer, Vec3> corpses(ServerLevel level, net.minecraft.world.phys.AABB area) {
+		Map<Integer, Vec3> found = new LinkedHashMap<>();
+		long now = level.getGameTime();
+		CORPSES.forEach((id, c) -> {
+			if (c.level() == level && c.until() >= now && area.contains(c.at())) found.put(id, c.at());
+		});
+		return found;
+	}
+
+	/**
+	 * Cuts or wounds a body, for the API: {@code wound} null cuts it off at {@code along}, else carves.
+	 *
+	 * @param wound half length, radius, depth of a wound
+	 * @return whether anything changed
+	 */
+	public static boolean changeCorpse(int id, String partName, double along, boolean fling, double[] wound) {
+		Corpse corpse = CORPSES.get(id);
+		if (corpse == null || corpse.until() < corpse.level().getGameTime()) return false;
+		var part = corpse.state().getProfile().part(partName);
+		if (part == null) return false;
+		int row = ru.deelter.chopchop.core.api.BodyOps.rowAt(part, along);
+		List<byte[]> messages = wound == null
+				? WoundBook.severCorpse(id, corpse.state(), part.getIndex(), row, fling)
+				: WoundBook.woundCorpse(id, corpse.state(), part.getIndex(), row, wound[0], wound[1], (int) wound[2]);
+		for (byte[] message : messages) {
+			for (ServerPlayer near : corpse.level().players()) {
+				if (MODDED.contains(near.getUUID()) && near.distanceToSqr(corpse.at()) < RESEND_RANGE * RESEND_RANGE) send(near, message);
+			}
+		}
+		return !messages.isEmpty();
+	}
+
+	/**
 	 * Forgets bodies whose time on every client is up.
 	 */
 	private static void tickCorpses(MinecraftServer server) {

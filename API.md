@@ -184,6 +184,23 @@ void onSwingLanded(LivingEntity attacker, LivingEntity target, SwingDirection di
 }
 ```
 
+## Dead bodies (server side)
+
+Dead mobs and players stay on the clients as bodies for `corpseSeconds`. The server keeps each one's wounds under
+the id the body goes by (the entity id of a mob, an id of its own for a player) and can cut it further:
+
+```java
+// Fabric: ServerLevel and AABB; Paper: World and BoundingBox, Location instead of Vec3
+Map<Integer, Vec3> bodies = ChopChopApi.corpses(level, area);   // id -> where it fell
+ChopChopApi.severCorpse(id, "left_arm", 0.5, false);             // the arm off at the elbow, falling as a piece
+ChopChopApi.woundCorpse(id, "body", 0.4, WoundShape.hole(1.5, 1));
+```
+
+Bodies fall, slide and are thrown on each client, so where one lies may be a block or two from where it fell; the
+server does not know how it lies, so a wound goes on the front of the part and a cut runs along it. Cutting a body
+is only for the eye: no damage, no drops, no kill cam. Players cut bodies by clicking at them; a client mod with
+blades of its own uses `ChopChopClientApi` (below).
+
 ## Notes
 
 - Mobs' wounds live as long as the mob is loaded; player wounds until respawn (or longer with `persistPlayers`).
