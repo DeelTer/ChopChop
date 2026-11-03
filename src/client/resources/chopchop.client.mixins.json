@@ -8,6 +8,7 @@
 		"CameraMixin",
 		"ClientLevelMixin",
 		"CubeMixin",
+		"EntityRenderDispatcherMixin",
 		"EntityRenderStateMixin",
 		"ItemInHandLayerMixin",
 		"KeyboardInputMixin",

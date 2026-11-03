@@ -71,6 +71,8 @@ disarm:
   drops: false
 # dead mobs lie as bodies this long for players with the mod, then sink away. 0: vanilla death
 corpse-seconds: 20.0
+# dead players lie as bodies too (a copy with their skin, armour and wounds)
+player-corpses: true
 kill-cam:
   # monsters after the killer within threat-radius: skip (no kill cam), freeze (they stand still), ignore
   threats: skip

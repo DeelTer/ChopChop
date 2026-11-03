@@ -168,6 +168,10 @@ public final class WoundRules {
 	 * away. 0: they go the vanilla way
 	 */
 	private double corpseSeconds = 20.0;
+	/**
+	 * dead players lie as bodies too: the clients draw a copy with their skin, armour and wounds
+	 */
+	private boolean playerCorpses = true;
 	private Map<WeaponKind, WeaponRule> weapons = defaultWeapons();
 	/**
 	 * Player wounds survive a restart of the server. Off: they last as long as the server runs or until respawn

@@ -237,7 +237,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onDeath(org.bukkit.event.entity.EntityDeathEvent event) {
 		LivingEntity target = event.getEntity();
-		if (target instanceof Player || !rules.isEnabled() || rules.getCorpseSeconds() <= 0) return;
+		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0 || target instanceof Player && !rules.isPlayerCorpses()) return;
 		if (profiles.forEntity(target.getType().getKey().toString()) == null) return;
 		Vector push = new Vector();
 		if (target.getLastDamageCause() instanceof EntityDamageByEntityEvent by) {

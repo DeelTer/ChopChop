@@ -1,22 +1,35 @@
 package ru.deelter.chopchop.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+import ru.deelter.chopchop.ChopChop;
 import ru.deelter.chopchop.core.net.Protocol;
+import ru.deelter.chopchop.core.wound.WoundState;
 
 import java.util.*;
 
 /**
- * Dead mobs that stay on the ground as bodies. The server says a mob died, which way the last blow pushed it and a
- * seed; every client then lets the same body fall the same way. The entity itself is kept in the client world after
- * the server removes it (see {@code ClientLevelMixin}) and drawn lying, wounds and all, until its time is up; then it
- * sinks into the ground and goes.
- * <p>
+ * Dead bodies that stay on the ground. The server says something died, which way the last blow pushed it and a
+ * seed; every client then lets the same body fall the same way, then it sinks into the ground and goes.
+ * <ul>
+ *     <li><b>Mobs:</b> the entity itself is kept in the client world after the server removes it (see
+ *     {@code ClientLevelMixin}) and drawn lying, wounds and all.</li>
+ *     <li><b>Players</b> can't be kept: a player respawns under the same entity id. Their body is a copy instead, a
+ *     player that is not in the world, with the same profile (so the same skin), the same armour and items, and the
+ *     wounds of the player as they were when it died, a head cut off included. The real dead player is hidden while
+ *     it lies dying.</li>
+ * </ul>
  * The fall: the body tips over its feet away from the blow, sped up by gravity, hits the ground with a small bounce.
- * Where it slides is the vanilla knockback of the killing blow, which the server still sends for the moment the
- * entity lives on there. Client thread only.
+ * Client thread only.
  */
 public final class Corpses {
 	private static final int MAX = 48;
@@ -25,21 +38,27 @@ public final class Corpses {
 	 */
 	public static final int SINK_TICKS = 40;
 	private static final float RIGHT_ANGLE = (float) (Math.PI / 2);
+	/**
+	 * ids of player copies: far below anything a server hands out
+	 */
+	private static int nextCopyId = -1_000_000;
 
 	private static final Map<Integer, Body> BODIES = new LinkedHashMap<>();
+	/**
+	 * real player id to the id of its copy, while the real one lies dying
+	 */
+	private static final Map<Integer, Integer> HIDDEN = new HashMap<>();
 	/**
 	 * set while a body is really removed, so the removal goes through
 	 */
 	private static boolean releasing;
+	private static ClientLevel bodiesLevel;
 
 	private Corpses() {
 	}
 
 	public static final class Body {
 		final int entityId;
-		/**
-		 * direction of the fall in the world, unit
-		 */
 		final float dx, dz;
 		final float roll;
 		final int ticks;
@@ -50,8 +69,19 @@ public final class Corpses {
 		 * the server removed the entity, only this client keeps it
 		 */
 		boolean held;
+		/**
+		 * the copy of a dead player, null for a mob
+		 */
+		final Player copy;
+		/**
+		 * the real player a copy is of, -1 for a mob
+		 */
+		final int sourceId;
 
-		Body(Protocol.Message.Corpse message) {
+		Body(Protocol.Message.Corpse message, int entityId, Player copy, int sourceId) {
+			this.entityId = entityId;
+			this.copy = copy;
+			this.sourceId = sourceId;
 			Random random = new Random(message.seed());
 			// never quite the same fall: a little off the push, a little on the side
 			double yaw = Math.atan2(message.dz(), message.dx()) + (random.nextDouble() - 0.5) * 0.5;
@@ -62,9 +92,6 @@ public final class Corpses {
 			this.speed = 0.02F + message.strength() * 0.06F;
 		}
 
-		/**
-		 * how far it has tipped, 0 standing to a right angle lying
-		 */
 		public float angle(float partial) {
 			return lastAngle + (angle - lastAngle) * partial;
 		}
@@ -93,9 +120,49 @@ public final class Corpses {
 	public static void add(Protocol.Message.Corpse message) {
 		if (!ru.deelter.chopchop.client.config.ClientConfig.get().isCorpses()) return;
 		ClientLevel level = Minecraft.getInstance().level;
-		if (level == null || !(level.getEntity(message.entityId()) instanceof LivingEntity)) return;
+		if (level == null) return;
+		if (bodiesLevel != level) clear();
+		bodiesLevel = level;
+		Entity entity = level.getEntity(message.entityId());
+		if (!(entity instanceof LivingEntity living)) return;
 		if (BODIES.size() >= MAX) release(BODIES.keySet().iterator().next());
-		BODIES.put(message.entityId(), new Body(message));
+		if (living instanceof Player player) {
+			Player copy = copy(level, player);
+			if (copy == null) return;
+			int id = copy.getId();
+			HIDDEN.put(player.getId(), id);
+			WoundState wounds = ClientWounds.get(player.getId());
+			if (wounds != null) ClientWounds.put(id, wounds);
+			BODIES.put(id, new Body(message, id, copy, player.getId()));
+		} else {
+			BODIES.put(message.entityId(), new Body(message, message.entityId(), null, -1));
+		}
+	}
+
+	/**
+	 * A player that is not in the world, standing where the dead one stands, dressed as it was.
+	 */
+	private static Player copy(ClientLevel level, Player player) {
+		try {
+			RemotePlayer copy = new RemotePlayer(level, player.getGameProfile());
+			copy.setId(nextCopyId--);
+			// the hat and sleeve layers, the main arm and the like
+			var values = player.getEntityData().getNonDefaultValues();
+			if (values != null) copy.getEntityData().assignValues(values);
+			copy.setHealth(copy.getMaxHealth());
+			copy.setPose(Pose.STANDING);
+			copy.setPos(player.getX(), player.getY(), player.getZ());
+			copy.setOldPosAndRot();
+			copy.setYRot(player.getYRot());
+			copy.yBodyRot = copy.yBodyRotO = player.yBodyRot;
+			copy.yHeadRot = copy.yHeadRotO = player.yHeadRot;
+			copy.setXRot(0);
+			for (EquipmentSlot slot : EquipmentSlot.values()) copy.setItemSlot(slot, player.getItemBySlot(slot).copy());
+			return copy;
+		} catch (RuntimeException e) {
+			ChopChop.LOG.warn("Can't make the body of {}", player.getName().getString(), e);
+			return null;
+		}
 	}
 
 	public static Body get(int entityId) {
@@ -103,29 +170,41 @@ public final class Corpses {
 	}
 
 	/**
-	 * Called when the server removes an entity: a body is kept.
+	 * The real player lies dying and its copy is drawn instead.
+	 */
+	public static boolean hides(Entity entity) {
+		if (HIDDEN.isEmpty()) return false;
+		Integer copy = HIDDEN.get(entity.getId());
+		return copy != null && entity instanceof LivingEntity living && living.isDeadOrDying() && BODIES.containsKey(copy);
+	}
+
+	/**
+	 * Called when the server removes an entity: the body of a mob is kept. Never a player, that comes back under
+	 * the same id.
 	 *
 	 * @return true to keep it in the world
 	 */
 	public static boolean holds(int entityId) {
 		if (releasing) return false;
 		Body body = BODIES.get(entityId);
-		if (body == null) return false;
+		if (body == null || body.copy != null) return false;
 		body.held = true;
 		return true;
 	}
 
 	public static void tick(Minecraft minecraft) {
 		ClientLevel level = minecraft.level;
-		if (level == null) {
-			BODIES.clear();
+		if (level == null || level != bodiesLevel) {
+			// another world: what was kept belongs to the old one, there is nothing to remove here
+			if (!BODIES.isEmpty() || !HIDDEN.isEmpty()) clear();
 			return;
 		}
 		if (BODIES.isEmpty() || minecraft.isPaused()) return;
 		List<Integer> done = new ArrayList<>();
 		for (Body body : BODIES.values()) {
-			Entity entity = level.getEntity(body.entityId);
-			if (entity == null) {
+			if (body.copy != null) {
+				follow(level, body);
+			} else if (level.getEntity(body.entityId) == null) {
 				done.add(body.entityId);
 				continue;
 			}
@@ -146,12 +225,55 @@ public final class Corpses {
 	}
 
 	/**
+	 * While the real player still lies dying the copy moves with it (the knockback of the last blow) and takes its
+	 * newest wounds: on Paper they come a tick after the death, a head blown off by the same blast included.
+	 */
+	private static void follow(ClientLevel level, Body body) {
+		Entity real = level.getEntity(body.sourceId);
+		body.copy.setOldPosAndRot();
+		if (!(real instanceof LivingEntity living) || !living.isDeadOrDying()) return;
+		body.copy.setPos(real.getX(), real.getY(), real.getZ());
+		WoundState wounds = ClientWounds.get(body.sourceId);
+		if (wounds != null) ClientWounds.put(body.entityId, wounds);
+	}
+
+	/**
+	 * Draws the copies of dead players; the bodies of mobs are drawn by the game, they are still in the world.
+	 */
+	public static void submit(LevelRenderContext context) {
+		if (BODIES.isEmpty()) return;
+		Vec3 camera = context.levelState().cameraRenderState.pos;
+		if (camera == null) return;
+		Minecraft minecraft = Minecraft.getInstance();
+		var dispatcher = minecraft.getEntityRenderDispatcher();
+		float partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		PoseStack stack = context.poseStack();
+		for (Body body : BODIES.values()) {
+			if (body.copy == null) continue;
+			try {
+				var state = dispatcher.extractEntity(body.copy, partial);
+				dispatcher.submit(state, context.levelState().cameraRenderState, state.x - camera.x, state.y - camera.y, state.z - camera.z,
+						stack, context.submitNodeCollector());
+			} catch (RuntimeException e) {
+				ChopChop.LOG.warn("Can't draw a dead player, it is left out", e);
+				body.age = body.ticks;
+			}
+		}
+	}
+
+	/**
 	 * Lets a body go: out of the client world if the server is done with it.
 	 */
 	private static void release(int entityId) {
 		Body body = BODIES.remove(entityId);
+		if (body == null) return;
+		if (body.copy != null) {
+			HIDDEN.remove(body.sourceId);
+			ClientWounds.clear(entityId);
+			return;
+		}
 		ClientLevel level = Minecraft.getInstance().level;
-		if (body == null || !body.held || level == null) return;
+		if (!body.held || level == null || level != bodiesLevel) return;
 		releasing = true;
 		try {
 			level.removeEntity(entityId, Entity.RemovalReason.DISCARDED);
@@ -161,7 +283,10 @@ public final class Corpses {
 	}
 
 	public static void clear() {
+		for (Body body : BODIES.values()) if (body.copy != null) ClientWounds.clear(body.entityId);
 		BODIES.clear();
+		HIDDEN.clear();
+		bodiesLevel = null;
 	}
 
 	public static int size() {

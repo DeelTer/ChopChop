@@ -71,6 +71,7 @@ public final class ChopChopClient implements ClientModInitializer {
 			KillCam.tick(client);
 		});
 		LevelRenderEvents.COLLECT_SUBMITS.register(Debris::submit);
+		LevelRenderEvents.COLLECT_SUBMITS.register(Corpses::submit);
 		Crawling.client = player -> {
 			if (player != Minecraft.getInstance().player || !serverSpeaks) return false;
 			WoundState own = ClientWounds.get(player.getId());

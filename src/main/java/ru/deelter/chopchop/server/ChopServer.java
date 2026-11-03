@@ -213,13 +213,14 @@ public final class ChopServer {
 	}
 
 	/**
-	 * A mob died: it stays on the ground as a body for the clients with the mod, falling away from the last blow.
+	 * A mob or a player died: it stays on the ground as a body for the clients with the mod, falling away from the
+	 * last blow. The clients keep a mob in their world, and draw a copy of a player (it respawns under the same id).
 	 * The server forgets nothing early: the wounds go when the entity is removed, as before.
 	 */
 	public static void onDied(LivingEntity target, DamageSource source, float damage) {
-		if (book == null || config == null || target instanceof Player) return;
+		if (book == null || config == null) return;
 		WoundRules rules = config.getRules();
-		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0) return;
+		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0 || target instanceof Player && !rules.isPlayerCorpses()) return;
 		if (profiles.forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString()) == null) return;
 		Vec3 push = Vec3.ZERO;
 		Entity by = source.getDirectEntity() != null ? source.getDirectEntity() : source.getEntity();

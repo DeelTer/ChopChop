@@ -65,6 +65,7 @@ final class PaperConfig {
 		rules.setDisarmMobs(config.getBoolean("disarm.mobs", rules.isDisarmMobs()));
 		rules.setDisarmDrops(config.getBoolean("disarm.drops", rules.isDisarmDrops()));
 		rules.setCorpseSeconds(config.getDouble("corpse-seconds", rules.getCorpseSeconds()));
+		rules.setPlayerCorpses(config.getBoolean("player-corpses", rules.isPlayerCorpses()));
 		ConfigurationSection weapons = config.getConfigurationSection("weapons");
 		if (weapons != null) {
 			Map<WeaponKind, WoundRules.WeaponRule> map = new EnumMap<>(WeaponKind.class);

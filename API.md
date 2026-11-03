@@ -190,7 +190,8 @@ void onSwingLanded(LivingEntity attacker, LivingEntity target, SwingDirection di
 - Mobs' wounds live as long as the mob is loaded; player wounds until respawn (or longer with `persistPlayers`).
 - Everything is sent to the players with the mod who track the entity, and to the entity itself if it is a player.
   Players without the mod see nothing and play as usual.
-- Dead mobs stay as bodies for `corpseSeconds` on clients with the mod; they keep their wounds, and severing a body
+- Dead mobs and players stay as bodies for `corpseSeconds` on clients with the mod (players as a copy with their
+  skin, armour and wounds, `playerCorpses`); they keep their wounds, and severing a body
   in that time works too (the server entity is gone after the vanilla 20 ticks of death, so do it before that).
 - The API classes are the only stable surface. Anything else in ChopChop (`ChopServer`, `WoundBook`, the
   protocol) may change between versions.
