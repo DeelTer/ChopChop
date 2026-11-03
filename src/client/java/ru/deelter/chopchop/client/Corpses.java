@@ -59,7 +59,7 @@ public final class Corpses {
 
 	public static final class Body {
 		final int entityId;
-		final float dx, dz;
+		float dx, dz;
 		final float roll;
 		final int ticks;
 		int age;
@@ -157,10 +157,12 @@ public final class Corpses {
 			}
 			Body body = new Body(message, id, copy, player.getId());
 			body.height = player.getBbHeight();
+			pickWay(level, copy, body);
 			BODIES.put(id, body);
 		} else {
 			Body body = new Body(message, message.entityId(), null, -1);
 			body.height = living.getBbHeight();
+			pickWay(level, living, body);
 			BODIES.put(message.entityId(), body);
 		}
 	}
@@ -240,7 +242,14 @@ public final class Corpses {
 			if (!body.landed) {
 				// a stick falling over its foot: the further it leans, the faster it goes
 				body.speed += 0.035F * (float) Math.sin(body.angle + 0.2F);
-				body.angle += body.speed;
+				float next = Math.min(RIGHT_ANGLE, body.angle + body.speed);
+				if (body.speed > 0 && !clear(level, entity.position().add(body.offset[1]), body, next)) {
+					// a wall or a step in the way: it leans against it and stays so
+					body.speed = 0;
+					body.landed = true;
+				} else {
+					body.angle = Math.max(0, next);
+				}
 				if (body.angle >= RIGHT_ANGLE) {
 					body.angle = RIGHT_ANGLE;
 					body.speed = -body.speed * 0.22F;
@@ -296,7 +305,15 @@ public final class Corpses {
 			next = new Vec3(next.x, top.y - entity.getY(), next.z);
 			v = v.y < -0.25 ? new Vec3(v.x * 0.5, -v.y * 0.25, v.z * 0.5) : new Vec3(v.x * 0.6, 0, v.z * 0.6);
 		}
-		if (blocked(level, nextFeet.add(0, 0.2, 0))) v = new Vec3(0, Math.min(0, v.y), 0);
+		// never into a block: not the feet, not anything along the body as it lies
+		if (blocked(level, nextFeet.add(0, 0.2, 0)) || !clear(level, nextFeet, body, body.angle)) {
+			v = new Vec3(0, Math.min(0, v.y), 0);
+			next = new Vec3(body.offset[1].x, next.y, body.offset[1].z);
+			if (!clear(level, entity.position().add(next), body, body.angle)) {
+				next = body.offset[1];
+				v = Vec3.ZERO;
+			}
+		}
 		body.velocity = v.lengthSqr() < 1e-5 ? Vec3.ZERO : v;
 		body.offset[1] = v.lengthSqr() < 1e-5 ? body.offset[1] : next;
 	}
@@ -322,6 +339,38 @@ public final class Corpses {
 			body.landed = false;
 			body.speed = (float) (0.1 + power * 0.3);
 		}
+	}
+
+	/**
+	 * Whether the body, tipped this far over its feet, is clear of blocks along its length: a few points from the hips
+	 * to the top of the head, a little above the ground it lies on.
+	 */
+	private static boolean clear(ClientLevel level, Vec3 feet, Body body, float angle) {
+		double sin = Math.sin(angle), cos = Math.cos(angle);
+		for (double t = 0.3; t <= 1.0001; t += 0.175) {
+			double along = body.height * t;
+			Vec3 point = feet.add(body.dx * along * sin, along * cos + 0.12, body.dz * along * sin);
+			if (blocked(level, point)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * The way to fall: the way of the blow if there is room to lie down, otherwise the nearest way round that has
+	 * room; with room nowhere, the way of the blow, and it leans on whatever is there.
+	 */
+	private static void pickWay(ClientLevel level, Entity entity, Body body) {
+		float dx = body.dx, dz = body.dz;
+		double[] turns = {0, 0.6, -0.6, 1.2, -1.2, 1.9, -1.9, Math.PI};
+		for (double turn : turns) {
+			float cx = (float) (dx * Math.cos(turn) - dz * Math.sin(turn));
+			float cz = (float) (dx * Math.sin(turn) + dz * Math.cos(turn));
+			body.dx = cx;
+			body.dz = cz;
+			if (clear(level, entity.position(), body, RIGHT_ANGLE)) return;
+		}
+		body.dx = dx;
+		body.dz = dz;
 	}
 
 	private static boolean solidUnder(ClientLevel level, Vec3 at) {
