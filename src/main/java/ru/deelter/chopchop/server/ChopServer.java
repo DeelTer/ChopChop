@@ -330,7 +330,7 @@ public final class ChopServer {
 		Hit hit = resolved.hit();
 		List<Mob> threats = List.of();
 		int attacker = source.getEntity() == null ? -1 : source.getEntity().getId();
-		if (source.getEntity() instanceof ServerPlayer killer && "head".equals(profile.part(hit.part()).getName())) {
+		if (source.getEntity() instanceof ServerPlayer killer && profile.part(hit.part()).isHead()) {
 			// a kill cam only where it does not leave the player helpless
 			threats = Consequences.threats(killer, target, rules);
 			if (!threats.isEmpty() && "skip".equalsIgnoreCase(rules.getKillCamThreats())) attacker = -1;
@@ -386,7 +386,7 @@ public final class ChopServer {
 		var pose = FabricHits.pose(target).crawling(state, rules);
 		var hits = HitLocator.blast(state, pose, from.x, from.y, from.z, target.getBbWidth(), target.getBbHeight(), rules.getExplosionWounds(), RANDOM);
 		// a player the blast killed loses the head, thrown away from where it went off
-		var head = state.getProfile().part("head");
+		var head = state.getProfile().head();
 		float[] headFacing = player && target.isDeadOrDying() && rules.isExplosionDeathTakesHead() && head != null
 				? HitLocator.facing(state.getProfile(), head, pose, from.x, from.y, from.z) : null;
 		for (byte[] message : book.blast(target.getUUID(), target.getId(), state, hits, lost, headFacing, rules)) broadcast(target, message);

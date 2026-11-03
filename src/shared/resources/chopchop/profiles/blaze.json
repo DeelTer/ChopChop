@@ -1,0 +1,34 @@
+{
+  "id": "blaze",
+  "entities": [
+    "minecraft:blaze"
+  ],
+  "material": "bone",
+  "height": 24,
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "box": [
+        -4,
+        -4,
+        -4,
+        4,
+        4,
+        4
+      ],
+      "boneScale": 0.4,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 3
+        }
+      ]
+    }
+  ]
+}

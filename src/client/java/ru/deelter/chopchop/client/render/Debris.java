@@ -120,7 +120,7 @@ public final class Debris {
 			this.pivot = pivot;
 			this.body = body;
 			this.size = size;
-			this.head = cut == 0 && "head".equals(part.getName());
+			this.head = cut == 0 && part.isHead();
 			this.start = pieces.getFirst().world().getNormalizedRotation(new Quaternionf());
 			float up = head ? 0.32F + random.nextFloat() * 0.08F : 0.12F + random.nextFloat() * 0.08F;
 			// a head goes mostly up and lands near its body, both in one picture

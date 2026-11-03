@@ -47,7 +47,7 @@ public final class BodyOps {
 	 * The row of voxels a cut at {@code along} (0 root, 1 end) goes through. A head comes off whole at any value.
 	 */
 	public static int rowAt(BodyPart part, double along) {
-		if ("head".equals(part.getName())) return 0;
+		if (part.isHead()) return 0;
 		int row = (int) Math.round(Math.clamp(along, 0, 1) * part.gy());
 		return Math.clamp(row, 0, part.gy() - 1);
 	}

@@ -1,0 +1,26 @@
+{
+  "id": "slime",
+  "entities": [
+    "minecraft:slime"
+  ],
+  "material": "meat",
+  "height": 24,
+  "parts": [
+    {
+      "name": "cube",
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "box": [
+        -4,
+        16,
+        -4,
+        4,
+        24,
+        4
+      ]
+    }
+  ]
+}

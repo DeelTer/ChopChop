@@ -47,7 +47,7 @@ public final class WoundEngine {
 		}
 
 		if (rules.isSevering() && def.severable() && weaponRule.sever() > 0
-				&& (rules.isHeads() || !"head".equals(def.getName())) && !lastLegProtected(state, part, rules)) {
+				&& (rules.isHeads() || !def.isHead()) && !lastLegProtected(state, part, rules)) {
 			int segment = def.segmentAt(hit.y());
 			if (segment >= 0) {
 				BodyPart.Segment seg = def.getSegments().get(segment);
@@ -210,7 +210,7 @@ public final class WoundEngine {
 				PartState part = state.part(index);
 				BodyPart def = part.getPart();
 				if (!def.severable() || lastLegProtected(state, part, rules)) continue;
-				boolean head = "head".equals(def.getName());
+				boolean head = def.isHead();
 				if (head && (!rules.isHeads() || over < rules.getExplosionSeverDamage() * 1.5)) continue;
 				if (random.nextDouble() >= (head ? chance / 2 : chance)) continue;
 				// a close blast takes the whole limb, a far one its end
@@ -219,7 +219,7 @@ public final class WoundEngine {
 				if (part.sever(cut)) severed.add(new int[]{index, cut});
 			}
 		}
-		var head = state.getProfile().part("head");
+		var head = state.getProfile().head();
 		if (takeHead && head != null && state.part(head.getIndex()).sever(0)) severed.add(new int[]{head.getIndex(), 0});
 		if (carved > 0 || !severed.isEmpty()) state.touch();
 		return new BlastOutcome(carved, severed);

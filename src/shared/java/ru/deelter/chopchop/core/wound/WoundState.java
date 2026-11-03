@@ -54,7 +54,7 @@ public final class WoundState {
 	 * The head came off whole, at the neck.
 	 */
 	public boolean headless() {
-		var head = profile.part("head");
+		var head = profile.head();
 		return head != null && parts[head.getIndex()].getSeveredAt() == 0;
 	}
 

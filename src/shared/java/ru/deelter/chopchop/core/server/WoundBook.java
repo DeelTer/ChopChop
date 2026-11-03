@@ -99,7 +99,7 @@ public final class WoundBook {
 		for (int[] cut : outcome.severed()) {
 			float[] at = first != null ? first.model() : headFacing;
 			for (Hit hit : hits) if (hit.part() == cut[0]) at = hit.model();
-			if (headFacing != null && cut[1] == 0 && "head".equals(state.getProfile().part(cut[0]).getName())) at = headFacing;
+			if (headFacing != null && cut[1] == 0 && state.getProfile().part(cut[0]).isHead()) at = headFacing;
 			messages.add(Protocol.event(entityId, Protocol.EVENT_BLAST, cut[0], at, cut[1], -1));
 		}
 		if (outcome.carved() > 0) messages.add(Protocol.event(entityId, Protocol.EVENT_WOUND, first.part(), first.model(), -1, -1));

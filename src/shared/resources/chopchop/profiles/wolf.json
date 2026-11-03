@@ -1,0 +1,247 @@
+{
+  "id": "wolf",
+  "entities": [
+    "minecraft:wolf"
+  ],
+  "material": "meat",
+  "height": 24,
+  "head": "real_head",
+  "crawl": {
+    "pitch": 0,
+    "lift": -0.5,
+    "shift": 0
+  },
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        -1,
+        13.5,
+        -7
+      ],
+      "box": [
+        -1,
+        -1,
+        -1,
+        1,
+        1,
+        1
+      ],
+      "woundable": false
+    },
+    {
+      "name": "real_head",
+      "parent": "head",
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "box": [
+        -2,
+        -3,
+        -2,
+        4,
+        3,
+        2
+      ],
+      "boneScale": 0.35,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 2
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        14,
+        2
+      ],
+      "rot": [
+        1.5707964,
+        0,
+        0
+      ],
+      "box": [
+        -3,
+        -2,
+        -3,
+        3,
+        7,
+        3
+      ]
+    },
+    {
+      "name": "upper_body",
+      "pivot": [
+        -1,
+        14,
+        -3
+      ],
+      "rot": [
+        1.5707964,
+        0,
+        0
+      ],
+      "box": [
+        -3,
+        -3,
+        -3,
+        5,
+        3,
+        4
+      ]
+    },
+    {
+      "name": "right_hind_leg",
+      "pivot": [
+        -2.5,
+        16,
+        7
+      ],
+      "box": [
+        0,
+        0,
+        -1,
+        2,
+        8,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 3,
+          "durability": 5
+        }
+      ]
+    },
+    {
+      "name": "left_hind_leg",
+      "pivot": [
+        0.5,
+        16,
+        7
+      ],
+      "box": [
+        0,
+        0,
+        -1,
+        2,
+        8,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 3,
+          "durability": 5
+        }
+      ]
+    },
+    {
+      "name": "right_front_leg",
+      "pivot": [
+        -2.5,
+        16,
+        -4
+      ],
+      "box": [
+        0,
+        0,
+        -1,
+        2,
+        8,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 3,
+          "durability": 5
+        }
+      ]
+    },
+    {
+      "name": "left_front_leg",
+      "pivot": [
+        0.5,
+        16,
+        -4
+      ],
+      "box": [
+        0,
+        0,
+        -1,
+        2,
+        8,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 3,
+          "durability": 5
+        }
+      ]
+    },
+    {
+      "name": "tail",
+      "pivot": [
+        -1,
+        12,
+        8
+      ],
+      "rot": [
+        0.6283,
+        0,
+        0
+      ],
+      "box": [
+        -1,
+        -1,
+        -1,
+        1,
+        1,
+        1
+      ],
+      "woundable": false
+    },
+    {
+      "name": "real_tail",
+      "parent": "tail",
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "box": [
+        0,
+        0,
+        -1,
+        2,
+        8,
+        1
+      ],
+      "boneScale": 0.15,
+      "segments": [
+        {
+          "name": "tail",
+          "cut": 2,
+          "durability": 3
+        }
+      ]
+    }
+  ]
+}

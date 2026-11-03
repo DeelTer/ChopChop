@@ -727,7 +727,7 @@ class CoreTest {
 	@Test
 	void everyProfileStandsAndCanBeHit() {
 		for (String id : new String[]{"player", "humanoid", "zombie", "skeleton", "pig", "horse", "skeleton_horse", "cow", "sheep", "creeper",
-				"enderman", "iron_golem", "villager", "illager", "witch", "zombie_villager", "spider", "chicken"}) {
+				"enderman", "iron_golem", "villager", "illager", "witch", "zombie_villager", "spider", "chicken", "wolf", "cat", "fox", "slime"}) {
 			BodyProfile profile = PROFILES.byId(id);
 			if (profile == null) continue;
 			double lowest = -1e9, highest = 1e9;
@@ -747,5 +747,25 @@ class CoreTest {
 			Hit hit = HitLocator.castOrNearest(state, SOUTH, 0, middle, 4, 0, 0, -1, 8);
 			assertNotNull(hit, id + " is hit from the front");
 		}
+	}
+
+	@Test
+	void aHeadDeeperInTheModelIsTheHead() {
+		BodyProfile wolf = PROFILES.forEntity("minecraft:wolf");
+		assertEquals("real_head", wolf.head().getName());
+		assertTrue(wolf.head().isHead());
+		assertFalse(wolf.part("head").isHead(), "the part that only holds it is not");
+		WoundState state = new WoundState(wolf);
+		WoundRules rules = new WoundRules();
+		rules.setWoundChance(0);
+		Hit chop = new Hit(wolf.head().getIndex(), 2, 2, 1, new float[3], 0);
+		WoundEngine.apply(state, chop, WeaponKind.SWORD, 4, rules, new Random(1));
+		WoundEngine.apply(state, chop, WeaponKind.SWORD, 4, rules, new Random(1));
+		assertTrue(state.headless(), "a wolf's head comes off");
+		// a holder is never hit
+		Hit hit = HitLocator.castOrNearest(new WoundState(wolf), SOUTH, -0.06, 64.65, 2, 0, 0, -1, 4);
+		assertNotNull(hit);
+		assertNotEquals("head", wolf.part(hit.part()).getName());
+		assertNull(PROFILES.byId("slime").head(), "a slime has no head");
 	}
 }

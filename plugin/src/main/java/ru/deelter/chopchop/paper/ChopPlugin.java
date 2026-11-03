@@ -302,7 +302,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			boolean wasLegless = state.legless(), wasHeadless = state.headless();
 			List<Mob> threats = List.of();
 			int attacker = p.attacker == null ? -1 : p.attacker.getEntityId();
-			if (p.blast == null && p.attacker instanceof Player killer && "head".equals(profile.part(p.hit.part()).getName())) {
+			if (p.blast == null && p.attacker instanceof Player killer && profile.part(p.hit.part()).isHead()) {
 				// a kill cam only where it does not leave the player helpless
 				threats = PaperConsequences.threats(killer, target, rules);
 				if (!threats.isEmpty() && "skip".equalsIgnoreCase(rules.getKillCamThreats())) attacker = -1;
@@ -439,7 +439,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	 * A player the blast killed loses the head, thrown away from where it went off.
 	 */
 	private float[] blastHead(LivingEntity target, WoundState state, Location from) {
-		var head = state.getProfile().part("head");
+		var head = state.getProfile().head();
 		if (!(target instanceof Player) || !target.isDead() || !rules.isExplosionDeathTakesHead() || head == null || from == null) return null;
 		return HitLocator.facing(state.getProfile(), head, pose(target).crawling(state, rules), from.getX(), from.getY(), from.getZ());
 	}

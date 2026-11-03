@@ -1,0 +1,26 @@
+{
+  "id": "ghast",
+  "entities": [
+    "minecraft:ghast"
+  ],
+  "material": "meat",
+  "height": 24,
+  "parts": [
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        17.6,
+        0
+      ],
+      "box": [
+        -8,
+        -8,
+        -8,
+        8,
+        8,
+        8
+      ]
+    }
+  ]
+}

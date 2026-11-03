@@ -35,6 +35,11 @@ public final class BodyProfile {
 	 */
 	private String skeletonTexture = "minecraft:textures/entity/skeleton/skeleton.png";
 	private int[] skeletonTextureSize = {64, 32};
+	/**
+	 * the part that is the head: off at the neck it kills. "head" unless the model keeps its cubes deeper (a wolf's
+	 * real_head)
+	 */
+	private String head = "head";
 
 	private transient Map<String, BodyPart> byName;
 	/**
@@ -64,6 +69,13 @@ public final class BodyProfile {
 	}
 
 	/**
+	 * The head, null for a body without one.
+	 */
+	public BodyPart head() {
+		return byName.get(head);
+	}
+
+	/**
 	 * The part a model part of this name draws, as itself or as an overlay of it.
 	 */
 	public BodyPart forModelPart(String name) {
@@ -90,6 +102,9 @@ public final class BodyProfile {
 			byModelName.put(part.getName(), part);
 			for (String overlay : part.getOverlays()) byModelName.put(overlay, part);
 		}
+		if (head == null) head = "head";
+		BodyPart headPart = byName.get(head);
+		if (headPart != null) headPart.markHead();
 		for (BodyPart part : parts) {
 			if (part.getParent() != null && !byName.containsKey(part.getParent())) {
 				throw new IllegalArgumentException("parent " + part.getParent() + " of " + part.getName() + " is not in " + id);

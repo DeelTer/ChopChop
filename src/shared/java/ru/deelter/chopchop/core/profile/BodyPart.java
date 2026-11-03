@@ -69,6 +69,18 @@ public final class BodyPart {
 	 * Index in the profile, set when it is loaded.
 	 */
 	private transient int index;
+	private transient boolean head;
+
+	/**
+	 * the head of its profile: off at the neck it kills
+	 */
+	public boolean isHead() {
+		return head;
+	}
+
+	void markHead() {
+		head = true;
+	}
 
 	public int gx() {
 		return grid[0];
