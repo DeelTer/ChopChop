@@ -27,21 +27,13 @@ public final class WoundEngine {
 	 */
 	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, WoundRules rules,
 								RandomGenerator random) {
-		return apply(state, hit, weapon, damage, lethal, false, rules, random);
-	}
-
-	/**
-	 * @param sure every blow leaves a wound, whatever the chance in the rules: a dead body that is cut shows it
-	 */
-	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, boolean sure, WoundRules rules,
-								RandomGenerator random) {
 		PartState part = state.part(hit.part());
 		BodyPart def = part.getPart();
 		WoundRules.WeaponRule weaponRule = rules.weapon(weapon);
 		int carved = 0;
 		int severedAt = -1;
 
-		if (def.isWoundable() && (sure || random.nextDouble() < rules.getWoundChance() * weaponRule.woundChance())) {
+		if (def.isWoundable() && random.nextDouble() < rules.getWoundChance() * weaponRule.woundChance()) {
 			if (weapon.edged() && hit.slash() != null) {
 				// a blade leaves a scar across the body, the way it swung
 				double length = Math.min(rules.getSlashLengthMax(),

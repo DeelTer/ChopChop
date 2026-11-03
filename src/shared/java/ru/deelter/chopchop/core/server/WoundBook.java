@@ -114,8 +114,7 @@ public final class WoundBook {
 	 * @param corpseId the id the body goes by on the clients
 	 */
 	public List<byte[]> hitCorpse(int corpseId, WoundState state, Hit hit, WeaponKind weapon, float damage, WoundRules rules) {
-		// a blow at a body always shows, and comes apart easily
-		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, Math.max(damage, 1), true, true, rules, random);
+		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, damage, true, rules, random);
 		List<byte[]> messages = new ArrayList<>(2);
 		if (!outcome.changed()) {
 			messages.add(Protocol.event(corpseId, Protocol.EVENT_SPLASH, hit.part(), hit.model(), -1, -1));
