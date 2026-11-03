@@ -776,4 +776,16 @@ class CoreTest {
 		assertFalse(PROFILES.byId("blaze").isCorpse());
 		assertTrue(PROFILES.byId("zombie").isCorpse());
 	}
+
+	@Test
+	void spidersAndSlimesHaveNoBones() {
+		for (String id : new String[]{"spider", "slime"}) {
+			BodyProfile profile = PROFILES.byId(id);
+			for (int i = 0; i < profile.getParts().size(); i++) {
+				assertEquals(0, profile.part(i).getBoneScale(), 1e-6, id + " " + profile.part(i).getName());
+				assertNull(profile.part(i).getSkeleton());
+			}
+		}
+		assertTrue(PROFILES.byId("cow").part("right_hind_leg").getBoneScale() > 0, "a cow has bones");
+	}
 }

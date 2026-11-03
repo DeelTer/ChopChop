@@ -161,7 +161,8 @@ public final class GoreRender {
 			String material = part.getMaterial();
 			Sink inside = Material.bleeds(material) ? MEAT_QUADS : BONE_QUADS;
 			VoxelMesher.inside(grid, mask, material, pose, inside, part.getSkeleton(), skeletonTexture, SKELETON_QUADS);
-			boolean bone = Material.bleeds(material) && ClientConfig.get().isBones();
+			// boneScale 0: a body without bones (a spider, a slime), its stumps are meat only
+			boolean bone = Material.bleeds(material) && ClientConfig.get().isBones() && part.getBoneScale() > 0;
 			if (partState.getSeveredAt() == 0) {
 				// the whole part is off, a head: the stump is where it sat, a neck of meat with the bone standing out
 				VoxelMesher.neck(grid, grid.gy(), false, pose, inside);

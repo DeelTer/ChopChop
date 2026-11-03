@@ -27,7 +27,7 @@
         4,
         0
       ],
-      "boneScale": 0.4,
+      "boneScale": 0,
       "segments": [
         {
           "name": "neck",
@@ -50,7 +50,8 @@
         3,
         3,
         3
-      ]
+      ],
+      "boneScale": 0
     },
     {
       "name": "body1",
@@ -66,7 +67,8 @@
         5,
         4,
         6
-      ]
+      ],
+      "boneScale": 0
     },
     {
       "name": "right_hind_leg",
@@ -89,7 +91,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -119,7 +121,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -149,7 +151,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -179,7 +181,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -209,7 +211,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -239,7 +241,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -269,7 +271,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
@@ -299,7 +301,7 @@
         1
       ],
       "leg": true,
-      "boneScale": 0.2,
+      "boneScale": 0,
       "segments": [
         {
           "name": "leg",
