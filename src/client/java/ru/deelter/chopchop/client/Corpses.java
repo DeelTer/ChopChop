@@ -486,6 +486,9 @@ public final class Corpses {
 		Entity real = level.getEntity(body.sourceId);
 		if (!(real instanceof LivingEntity living) || !living.isDeadOrDying()) return;
 		body.copy.setPos(real.getX(), real.getY(), real.getZ());
+		// the wounds of the death only (on Paper the killing blow comes a tick late); later the body has its own, cut
+		// by blows at it, and the living player's must not overwrite them
+		if (body.age > 10) return;
 		WoundState wounds = ClientWounds.get(body.sourceId);
 		if (wounds != null) {
 			ClientWounds.put(body.entityId, wounds);
