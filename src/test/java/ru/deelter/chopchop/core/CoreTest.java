@@ -768,4 +768,12 @@ class CoreTest {
 		assertNotEquals("head", wolf.part(hit.part()).getName());
 		assertNull(PROFILES.byId("slime").head(), "a slime has no head");
 	}
+
+	@Test
+	void whatSplitsOrFliesLeavesNoBody() {
+		assertFalse(PROFILES.byId("slime").isCorpse(), "a slime splits");
+		assertFalse(PROFILES.byId("ghast").isCorpse());
+		assertFalse(PROFILES.byId("blaze").isCorpse());
+		assertTrue(PROFILES.byId("zombie").isCorpse());
+	}
 }

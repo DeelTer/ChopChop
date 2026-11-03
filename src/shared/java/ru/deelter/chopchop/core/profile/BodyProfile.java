@@ -40,6 +40,11 @@ public final class BodyProfile {
 	 * real_head)
 	 */
 	private String head = "head";
+	/**
+	 * a dead one stays on the ground as a body. Off for what splits (a slime) or flies (a ghast, a blaze): it goes the
+	 * vanilla way
+	 */
+	private boolean corpse = true;
 
 	private transient Map<String, BodyPart> byName;
 	/**

@@ -355,7 +355,8 @@ public final class ChopServer {
 		if (book == null || config == null) return;
 		WoundRules rules = config.getRules();
 		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0 || target instanceof Player && !rules.isPlayerCorpses()) return;
-		if (profiles.forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString()) == null) return;
+		BodyProfile bodyProfile = profiles.forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString());
+		if (bodyProfile == null || !bodyProfile.isCorpse()) return;
 		Vec3 push = Vec3.ZERO;
 		Entity by = source.getDirectEntity() != null ? source.getDirectEntity() : source.getEntity();
 		if (by != null && by != target) push = target.position().subtract(by.position());

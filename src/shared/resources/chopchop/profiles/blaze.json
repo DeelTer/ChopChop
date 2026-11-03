@@ -5,6 +5,7 @@
   ],
   "material": "bone",
   "height": 24,
+  "corpse": false,
   "parts": [
     {
       "name": "head",

@@ -5,6 +5,7 @@
   ],
   "material": "meat",
   "height": 24,
+  "corpse": false,
   "parts": [
     {
       "name": "cube",
