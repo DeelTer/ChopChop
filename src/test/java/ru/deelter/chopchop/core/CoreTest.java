@@ -698,4 +698,25 @@ class CoreTest {
 		// the zombie and the player keep the skeleton's texture
 		assertEquals("minecraft:textures/entity/skeleton/skeleton.png", PROFILES.byId("zombie").getSkeletonTexture());
 	}
+
+	@Test
+	void aBodyIsNewerThanTheLivingStateItCameFrom() throws Exception {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(4));
+		WoundState living = new WoundState(profile);
+		int head = profile.part("head").getIndex();
+		living.part(profile.part("left_leg").getIndex()).sever(7);
+		living.touch();
+		WoundState body = book.copyOf(living, profile);
+		assertEquals(living.getRevision(), body.getRevision(), "the copy keeps the revision");
+		// the head off the body
+		WoundRules rules = new WoundRules();
+		rules.setLethalHeadChance(1);
+		var messages = book.hitCorpse(5, body, new Hit(head, 3, 4, 0, new float[3], 0), WeaponKind.AXE, 8, rules);
+		var sent = (Protocol.Message.State) Protocol.readClientbound(messages.getLast(), PROFILES);
+		assertTrue(sent.state().headless());
+		// the living state sent late is older: a client drops it and keeps the head off
+		var late = (Protocol.Message.State) Protocol.readClientbound(Protocol.state(5, living), PROFILES);
+		assertTrue(late.state().getRevision() < sent.state().getRevision());
+	}
 }

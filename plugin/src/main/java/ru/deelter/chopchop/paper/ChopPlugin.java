@@ -352,9 +352,17 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		// a mob's body keeps its entity id on the clients; a player comes back under its id, its body gets one of its own
 		int corpseId = target instanceof Player ? nextCorpseId-- : target.getEntityId();
 		BodyProfile profile = profiles.forEntity(target.getType().getKey().toString());
-		// the killing blow is applied a tick later (flush): the body takes its wounds then
-		getServer().getScheduler().runTaskLater(this, () -> corpses.put(corpseId, new Corpse(target.getWorld(), target.getLocation().toVector(),
-				book.copyOf(book.get(target.getUniqueId()), profile), target.getWorld().getFullTime() + ticks * 3L)), 2);
+		// at once, so a blow at the body right away is not lost; the killing blow itself is applied a tick later
+		// (flush): the body takes it then, unless it was cut already
+		long until = target.getWorld().getFullTime() + ticks * 3L;
+		Corpse first = new Corpse(target.getWorld(), target.getLocation().toVector(), book.copyOf(book.get(target.getUniqueId()), profile), until);
+		corpses.put(corpseId, first);
+		int firstRevision = first.state().getRevision();
+		getServer().getScheduler().runTaskLater(this, () -> {
+			if (corpses.get(corpseId) == first && first.state().getRevision() == firstRevision) {
+				corpses.put(corpseId, new Corpse(first.world(), first.at(), book.copyOf(book.get(target.getUniqueId()), profile), until));
+			}
+		}, 2);
 		byte[] message = Protocol.corpse(target.getEntityId(), (float) push.getX(), (float) push.getZ(), strength,
 				java.util.concurrent.ThreadLocalRandom.current().nextInt(), ticks, corpseId);
 		broadcast(target, message);

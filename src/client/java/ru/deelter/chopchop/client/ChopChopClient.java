@@ -119,7 +119,14 @@ public final class ChopChopClient implements ClientModInitializer {
 				SERVER_RULES.setKillCamThreats((hello.flags() & Protocol.FLAG_KILL_CAM_ANYWAY) != 0 ? "ignore" : "skip");
 				ChopChop.LOG.info("Server speaks ChopChop protocol {}", hello.version());
 			}
-			case Protocol.Message.State state -> ClientWounds.put(state.entityId(), state.state());
+			case Protocol.Message.State state -> {
+				// a body on the ground only ever gets more cut: a state older than the one it has is the living entity's,
+				// sent while it still lay dying on the server, and would put back what was cut off the body since
+				WoundState had = Corpses.get(state.entityId()) != null ? ClientWounds.get(state.entityId()) : null;
+				if (had == null || had.getProfile() != state.state().getProfile() || state.state().getRevision() >= had.getRevision()) {
+					ClientWounds.put(state.entityId(), state.state());
+				}
+			}
 			case Protocol.Message.Clear clear -> ClientWounds.clear(clear.entityId());
 			case Protocol.Message.Corpse corpse -> Corpses.add(corpse);
 			case Protocol.Message.Event event -> {
