@@ -442,6 +442,24 @@ public final class Corpses {
 	}
 
 	/**
+	 * While the real player still lies dying the copy moves with it (the knockback of the last blow) and takes its
+	 * newest wounds: on Paper they come a tick after the death, a head blown off by the same blast included.
+	 */
+	private static void follow(ClientLevel level, Body body) {
+		body.copy.setOldPosAndRot();
+		// only the newest body of a player follows it: it may have died again since
+		if (!Objects.equals(HIDDEN.get(body.sourceId), body.entityId)) return;
+		Entity real = level.getEntity(body.sourceId);
+		if (!(real instanceof LivingEntity living) || !living.isDeadOrDying()) return;
+		body.copy.setPos(real.getX(), real.getY(), real.getZ());
+		WoundState wounds = ClientWounds.get(body.sourceId);
+		if (wounds != null) {
+			ClientWounds.put(body.entityId, wounds);
+			ClientWounds.get(body.entityId);
+		}
+	}
+
+	/**
 	 * Draws the copies of dead players; the bodies of mobs are drawn by the game, they are still in the world.
 	 */
 	public static void submit(LevelRenderContext context) {
