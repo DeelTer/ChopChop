@@ -2,6 +2,7 @@ package ru.deelter.chopchop.core;
 
 import org.joml.Vector3d;
 import org.junit.jupiter.api.Test;
+import ru.deelter.chopchop.core.hit.AimCheck;
 import ru.deelter.chopchop.core.hit.BodyPose;
 import ru.deelter.chopchop.core.hit.Hit;
 import ru.deelter.chopchop.core.hit.HitLocator;
@@ -511,5 +512,34 @@ class CoreTest {
 		assertFalse(ru.deelter.chopchop.core.api.BodyOps.sever(book, id, 1, state, "left_arm", 0.5, false, -1).isEmpty());
 		assertEquals(6, book.get(id).part(profile.part("left_arm").getIndex()).getSeveredAt());
 		assertTrue(ru.deelter.chopchop.core.api.BodyOps.sever(book, id, 1, state, "tail", 0.5, false, -1).isEmpty());
+	}
+
+	@Test
+	void clientAimIsTakenOnlyWhenPlausible() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundState state = new WoundState(profile);
+		int arm = profile.part("right_arm").getIndex();
+		// the zombie arm reaches forward; the attacker in front looks at its rest spot, the client saw it a bit lower
+		var center = HitLocator.toWorld(SOUTH, HitLocator.voxelCenter(profile, profile.part(arm), 1, 8, 1).x,
+				HitLocator.voxelCenter(profile, profile.part(arm), 1, 8, 1).y, HitLocator.voxelCenter(profile, profile.part(arm), 1, 8, 1).z);
+		double ex = center.x, ey = center.y + 0.2, ez = center.z + 2.5;
+		Vector3d look = new Vector3d(center.x - ex, center.y - ey, center.z - ez).normalize();
+		var aim = Protocol.readAim(Protocol.aim(7, arm, 1, 8, 1, new float[]{0, 0, 1}, null));
+		assertNotNull(aim);
+		Hit hit = AimCheck.accept(state, SOUTH, aim, ex, ey, ez, look.x, look.y, look.z, 3);
+		assertNotNull(hit);
+		assertEquals(arm, hit.part());
+		assertArrayEquals(new float[]{0, 0, 1}, hit.inward());
+		// looking far away from it: refused
+		assertNull(AimCheck.accept(state, SOUTH, aim, ex, ey, ez, 1, 0, 0, 3));
+		// out of reach: refused
+		assertNull(AimCheck.accept(state, SOUTH, aim, ex, ey, ez + 10, look.x, look.y, look.z, 3));
+		// a voxel that is gone, or out of the grid: refused
+		state.part(arm).sever(5);
+		assertNull(AimCheck.accept(state, SOUTH, aim, ex, ey, ez, look.x, look.y, look.z, 3));
+		assertNull(AimCheck.accept(state, SOUTH, Protocol.readAim(Protocol.aim(7, arm, 9, 1, 1, null, null)), ex, ey, ez, look.x, look.y, look.z, 3));
+		// broken messages are nothing
+		assertNull(Protocol.readAim(new byte[]{Protocol.C_AIM, 1, 2}));
+		assertEquals(-1, Protocol.readServerbound(Protocol.aim(7, arm, 1, 8, 1, null, null)));
 	}
 }

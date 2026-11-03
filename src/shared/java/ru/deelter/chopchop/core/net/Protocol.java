@@ -25,6 +25,13 @@ public final class Protocol {
 	 * to the server: the mod is installed. Payload: version
 	 */
 	public static final byte C_HELLO = 1;
+	/**
+	 * to the server, right before an attack: where on the target the client saw the crosshair, on the pose it drew
+	 * (animated, a swinging arm where it was). Only a hint: the server checks it and uses it only if it is plausible.
+	 * Payload: entity, part, voxel x y z, the way in (3 floats), the cut (3 floats, all 0: none)
+	 */
+	public static final byte C_AIM = 2;
+	public static final int AIM_LENGTH = 1 + 4 + 1 + 3 + 12 + 12;
 
 	/**
 	 * to the client: the server speaks the protocol. Payload: version
@@ -187,6 +194,59 @@ public final class Protocol {
 			}
 			default -> throw new IOException("unknown message " + type);
 		};
+	}
+
+	public static byte[] aim(int entityId, int part, int x, int y, int z, float[] inward, float[] slash) {
+		return write(out -> {
+			out.writeByte(C_AIM);
+			out.writeInt(entityId);
+			out.writeByte(part);
+			out.writeByte(x);
+			out.writeByte(y);
+			out.writeByte(z);
+			for (int i = 0; i < 3; i++) out.writeFloat(inward == null ? 0 : inward[i]);
+			for (int i = 0; i < 3; i++) out.writeFloat(slash == null ? 0 : slash[i]);
+		});
+	}
+
+	/**
+	 * Where a client says it hit.
+	 *
+	 * @param inward null if not known
+	 * @param slash  null for none
+	 */
+	public record Aim(int entityId, int part, int x, int y, int z, float[] inward, float[] slash) {
+	}
+
+	/**
+	 * @return the aim of a client, or null if the message is not one or is broken
+	 */
+	public static Aim readAim(byte[] data) {
+		if (data == null || data.length != AIM_LENGTH || data[0] != C_AIM) return null;
+		try {
+			DataInputStream in = new DataInputStream(new ByteArrayInputStream(data, 1, data.length - 1));
+			int entity = in.readInt();
+			int part = in.readUnsignedByte(), x = in.readUnsignedByte(), y = in.readUnsignedByte(), z = in.readUnsignedByte();
+			float[] inward = {in.readFloat(), in.readFloat(), in.readFloat()};
+			float[] slash = {in.readFloat(), in.readFloat(), in.readFloat()};
+			return new Aim(entity, part, x, y, z, unit(inward), unit(slash));
+		} catch (IOException e) {
+			return null;
+		}
+	}
+
+	/**
+	 * A direction made unit length, null if it is none or not a number.
+	 */
+	private static float[] unit(float[] v) {
+		double l = 0;
+		for (float f : v) {
+			if (!Float.isFinite(f)) return null;
+			l += f * f;
+		}
+		l = Math.sqrt(l);
+		if (l < 1e-4) return null;
+		return new float[]{(float) (v[0] / l), (float) (v[1] / l), (float) (v[2] / l)};
 	}
 
 	/**

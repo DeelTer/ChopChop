@@ -32,6 +32,12 @@ public abstract class ModelFeatureRendererMixin {
 			RenderType type = submit.renderType();
 			boolean gore = !type.isOutline() && (submit.tintedColor() >>> 24) == 0xFF;
 			if (submit.state() instanceof ChopRenderState state) {
+				if (model == state.chopchop$mainModel()) {
+					// the pose as drawn, for the crosshair (ModelPick): a swinging arm is hit where it is
+					AnimatedPose.capture(model, state.chopchop$entityId(),
+							((net.minecraft.client.renderer.entity.state.EntityRenderState) submit.state()).distanceToCameraSq, submit.pose(),
+							state.chopchop$camera());
+				}
 				WoundState wounds = state.chopchop$wounds();
 				if (wounds == null) return;
 				double max = ClientConfig.get().getMaxDistance();

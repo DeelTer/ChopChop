@@ -53,6 +53,19 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	private PaperConsequences consequences;
 	private NamespacedKey storageKey;
 	private final Set<UUID> modded = new HashSet<>();
+	/**
+	 * the last aim each player sent, for the attack that follows it
+	 */
+	private final Map<UUID, PendingAim> aims = new HashMap<>();
+
+	private record PendingAim(Protocol.Aim aim, long tick) {
+	}
+
+	private Protocol.Aim takeAim(Player player, Entity target) {
+		PendingAim pending = aims.remove(player.getUniqueId());
+		if (pending == null || pending.aim().entityId() != target.getEntityId()) return null;
+		return player.getWorld().getFullTime() - pending.tick() <= 2 ? pending.aim() : null;
+	}
 	private final List<Pending> pending = new ArrayList<>();
 	private boolean flushScheduled;
 
@@ -131,6 +144,11 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 
 	@Override
 	public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] message) {
+		if (Protocol.CHANNEL.equals(channel) && message.length > 0 && message[0] == Protocol.C_AIM) {
+			Protocol.Aim aim = Protocol.readAim(message);
+			if (aim != null && modded.contains(player.getUniqueId())) aims.put(player.getUniqueId(), new PendingAim(aim, player.getWorld().getFullTime()));
+			return;
+		}
 		if (Protocol.CHANNEL.equals(channel) && Protocol.readServerbound(message) != Protocol.VERSION) {
 			getLogger().info(player.getName() + " has a ChopChop of another protocol version");
 			return;
@@ -371,7 +389,14 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 				dir = eye.getDirection().dot(toCenter) > 0.85 ? eye.getDirection() : toCenter;
 				reach = eye.toVector().distance(center) + 2;
 			}
-			Hit hit = HitLocator.castOrNearest(state, pose, eye.getX(), eye.getY(), eye.getZ(), dir.getX(), dir.getY(), dir.getZ(), reach);
+			Hit hit = null;
+			// a client with the mod says where it saw the blow land on the animated body; checked, never trusted blindly
+			if (living instanceof Player player) {
+				Vector unit = dir.clone().normalize();
+				hit = ru.deelter.chopchop.core.hit.AimCheck.accept(state, pose, takeAim(player, target), eye.getX(), eye.getY(), eye.getZ(),
+						unit.getX(), unit.getY(), unit.getZ(), reach);
+			}
+			if (hit == null) hit = HitLocator.castOrNearest(state, pose, eye.getX(), eye.getY(), eye.getZ(), dir.getX(), dir.getY(), dir.getZ(), reach);
 			ItemStack weapon = living.getEquipment() == null ? null : living.getEquipment().getItemInMainHand();
 			return hit == null ? null : new Located(hit, classify(weapon));
 		}
@@ -438,6 +463,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	@EventHandler
 	public void onQuit(PlayerQuitEvent event) {
 		modded.remove(event.getPlayer().getUniqueId());
+		aims.remove(event.getPlayer().getUniqueId());
 		if (rules.isPersistPlayers()) store(event.getPlayer());
 	}
 

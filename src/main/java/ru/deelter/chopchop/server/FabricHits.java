@@ -76,7 +76,13 @@ final class FabricHits {
 				dir = look.dot(toCenter) > 0.85 ? look : toCenter;
 				reach = eye.distanceTo(target.getBoundingBox().getCenter()) + 2;
 			}
-			Hit hit = HitLocator.castOrNearest(state, pose, eye.x, eye.y, eye.z, dir.x, dir.y, dir.z, reach);
+			Hit hit = null;
+			// a client with the mod says where it saw the blow land on the animated body; checked, never trusted blindly
+			if (living instanceof net.minecraft.server.level.ServerPlayer player) {
+				hit = ru.deelter.chopchop.core.hit.AimCheck.accept(state, pose, ChopServer.takeAim(player, target), eye.x, eye.y, eye.z,
+						dir.x, dir.y, dir.z, reach);
+			}
+			if (hit == null) hit = HitLocator.castOrNearest(state, pose, eye.x, eye.y, eye.z, dir.x, dir.y, dir.z, reach);
 			ItemStack weapon = source.getWeaponItem();
 			if (weapon == null || weapon.isEmpty()) weapon = living.getMainHandItem();
 			return hit == null ? null : new Resolved(hit, classify(weapon));

@@ -60,12 +60,14 @@ public final class ChopChopClient implements ClientModInitializer {
 			Debris.clear();
 			Effects.clear();
 			Corpses.clear();
+			ru.deelter.chopchop.client.render.AnimatedPose.clear();
 		});
 		ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> ClientWounds.clear(entity.getId()));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			ClientWounds.tick(client);
 			Debris.tick(client);
 			Corpses.tick(client);
+			ru.deelter.chopchop.client.render.AnimatedPose.tick();
 			Effects.tick(client);
 			HeadCam.tick(client);
 			KillCam.tick(client);

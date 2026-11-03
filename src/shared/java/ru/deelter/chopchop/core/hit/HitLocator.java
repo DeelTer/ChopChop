@@ -191,6 +191,17 @@ public final class HitLocator {
 		return new float[]{(float) (a[0] / length), (float) (a[1] / length), (float) (a[2] / length)};
 	}
 
+	/**
+	 * A ray against one part, in the model space of the rest pose: for a client that brought a ray from the pose it
+	 * drew into the rest frame of the part.
+	 *
+	 * @param up the world up in the same space, for the direction of a cut
+	 */
+	public static Hit castOnePart(BodyProfile profile, BodyPart part, PartState partState, Vector3d origin, Vector3d dir, Vector3d up,
+								  double maxT) {
+		return castPart(profile, part, partState, origin, dir, up, maxT);
+	}
+
 	private static Hit castPart(BodyProfile profile, BodyPart part, PartState partState, Vector3d origin, Vector3d dir, Vector3d up, double maxT) {
 		Matrix4d toLocal = partToModel(profile, part).invert();
 		Vector3d o = toLocal.transformPosition(new Vector3d(origin));

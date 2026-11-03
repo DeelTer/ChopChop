@@ -64,6 +64,22 @@ public final class ChopServer {
 	 */
 	private static final Set<UUID> PLAYERS = new HashSet<>();
 	private static final java.util.random.RandomGenerator RANDOM = new Random();
+	/**
+	 * the last aim each player sent, for the attack that follows it in the same tick
+	 */
+	private static final Map<UUID, PendingAim> AIMS = new HashMap<>();
+
+	record PendingAim(Protocol.Aim aim, long tick) {
+	}
+
+	/**
+	 * The aim a player sent for this attack on this target, taken once; null if none or stale.
+	 */
+	static Protocol.Aim takeAim(ServerPlayer player, Entity target) {
+		PendingAim pending = AIMS.remove(player.getUUID());
+		if (pending == null || pending.aim().entityId() != target.getId()) return null;
+		return player.level().getGameTime() - pending.tick() <= 2 ? pending.aim() : null;
+	}
 
 	private ChopServer() {
 	}
@@ -77,6 +93,7 @@ public final class ChopServer {
 			book = new WoundBook(profiles, new Random());
 			MODDED.clear();
 			PLAYERS.clear();
+			AIMS.clear();
 			Consequences.reset();
 			if (config.getRules().isPersistPlayers()) loadPlayers(server);
 		});
@@ -91,13 +108,21 @@ public final class ChopServer {
 
 		ServerPlayNetworking.registerGlobalReceiver(ChopPayload.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
+			Protocol.Aim aim = Protocol.readAim(payload.data());
+			if (aim != null) {
+				if (MODDED.contains(player.getUUID())) AIMS.put(player.getUUID(), new PendingAim(aim, player.level().getGameTime()));
+				return;
+			}
 			int version = Protocol.readServerbound(payload.data());
 			if (version != Protocol.VERSION) return;
 			MODDED.add(player.getUUID());
 			send(player, Protocol.hello(Protocol.flags(config.getRules())));
 			sendKnownAround(player);
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> MODDED.remove(handler.getPlayer().getUUID()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			MODDED.remove(handler.getPlayer().getUUID());
+			AIMS.remove(handler.getPlayer().getUUID());
+		});
 
 		EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
 			if (book == null || !MODDED.contains(player.getUUID())) return;
