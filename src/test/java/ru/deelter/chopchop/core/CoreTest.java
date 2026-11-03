@@ -648,4 +648,18 @@ class CoreTest {
 		assertTrue(body.part(chest).carvedCount() > 0);
 		for (int x = 0; x < 8; x++) for (int y = 0; y < 12; y++) assertFalse(body.part(chest).carved(x, y, 3), "never the back");
 	}
+
+	@Test
+	void bonesSitInTheMiddleOfTheirParts() {
+		for (String id : new String[]{"player", "zombie", "humanoid"}) {
+			BodyProfile profile = PROFILES.byId(id);
+			for (int i = 0; i < profile.getParts().size(); i++) {
+				var part = profile.part(i);
+				if (part.getSkeleton() == null) continue;
+				float[] b = part.getBox(), k = part.getSkeleton().box();
+				assertEquals((b[0] + b[3]) / 2, (k[0] + k[3]) / 2, 0.01, id + " " + part.getName() + " across");
+				assertEquals((b[2] + b[5]) / 2, (k[2] + k[5]) / 2, 0.01, id + " " + part.getName() + " front to back");
+			}
+		}
+	}
 }
