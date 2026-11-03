@@ -1,0 +1,327 @@
+{
+  "id": "zombie_villager",
+  "entities": [
+    "minecraft:zombie_villager"
+  ],
+  "material": "meat",
+  "height": 32,
+  "crawl": {
+    "pitch": -90,
+    "lift": 0.125,
+    "shift": 1.375
+  },
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "box": [
+        -4,
+        -10,
+        -4,
+        4,
+        0,
+        4
+      ],
+      "overlays": [
+        "hat",
+        "hat_rim",
+        "nose"
+      ],
+      "boneScale": 0.45,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 3
+        }
+      ],
+      "skeleton": {
+        "box": [
+          -3,
+          -9,
+          -3,
+          3,
+          -1,
+          3
+        ],
+        "cube": [
+          -4,
+          -9,
+          -4,
+          4,
+          -1,
+          4
+        ],
+        "uv": [
+          0,
+          0
+        ],
+        "patchy": 0.25
+      }
+    },
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "box": [
+        -4,
+        0,
+        -3,
+        4,
+        12,
+        3
+      ],
+      "overlays": [
+        "jacket"
+      ],
+      "skeleton": {
+        "box": [
+          -4,
+          0,
+          -1,
+          4,
+          12,
+          1
+        ],
+        "cube": [
+          -4,
+          0,
+          -2,
+          4,
+          12,
+          2
+        ],
+        "uv": [
+          16,
+          16
+        ],
+        "patchy": 0
+      }
+    },
+    {
+      "name": "right_arm",
+      "pivot": [
+        -5,
+        2,
+        0
+      ],
+      "rot": [
+        -1.396,
+        0,
+        0
+      ],
+      "box": [
+        -3,
+        -2,
+        -2,
+        1,
+        10,
+        2
+      ],
+      "hand": "right",
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 3,
+          "durability": 12
+        },
+        {
+          "name": "lower",
+          "cut": 7,
+          "durability": 8
+        }
+      ],
+      "skeleton": {
+        "box": [
+          -2,
+          -2,
+          -1,
+          0,
+          10,
+          1
+        ],
+        "cube": [
+          -2,
+          -2,
+          -1,
+          0,
+          10,
+          1
+        ],
+        "uv": [
+          40,
+          16
+        ],
+        "patchy": 0
+      }
+    },
+    {
+      "name": "left_arm",
+      "pivot": [
+        5,
+        2,
+        0
+      ],
+      "rot": [
+        -1.396,
+        0,
+        0
+      ],
+      "box": [
+        -1,
+        -2,
+        -2,
+        3,
+        10,
+        2
+      ],
+      "hand": "left",
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 3,
+          "durability": 12
+        },
+        {
+          "name": "lower",
+          "cut": 7,
+          "durability": 8
+        }
+      ],
+      "skeleton": {
+        "box": [
+          0,
+          -2,
+          -1,
+          2,
+          10,
+          1
+        ],
+        "cube": [
+          0,
+          -2,
+          -1,
+          2,
+          10,
+          1
+        ],
+        "uv": [
+          40,
+          16
+        ],
+        "patchy": 0
+      }
+    },
+    {
+      "name": "right_leg",
+      "pivot": [
+        -2,
+        12,
+        0
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        12,
+        2
+      ],
+      "leg": true,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 3,
+          "durability": 14
+        },
+        {
+          "name": "lower",
+          "cut": 7,
+          "durability": 9
+        }
+      ],
+      "skeleton": {
+        "box": [
+          -1,
+          0,
+          -1,
+          1,
+          12,
+          1
+        ],
+        "cube": [
+          -1,
+          0,
+          -1,
+          1,
+          12,
+          1
+        ],
+        "uv": [
+          0,
+          16
+        ],
+        "patchy": 0
+      }
+    },
+    {
+      "name": "left_leg",
+      "pivot": [
+        2,
+        12,
+        0
+      ],
+      "box": [
+        -2,
+        0,
+        -2,
+        2,
+        12,
+        2
+      ],
+      "leg": true,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 3,
+          "durability": 14
+        },
+        {
+          "name": "lower",
+          "cut": 7,
+          "durability": 9
+        }
+      ],
+      "skeleton": {
+        "box": [
+          -1,
+          0,
+          -1,
+          1,
+          12,
+          1
+        ],
+        "cube": [
+          -1,
+          0,
+          -1,
+          1,
+          12,
+          1
+        ],
+        "uv": [
+          0,
+          16
+        ],
+        "patchy": 0
+      }
+    }
+  ]
+}

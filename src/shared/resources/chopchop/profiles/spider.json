@@ -1,0 +1,312 @@
+{
+  "id": "spider",
+  "entities": [
+    "minecraft:spider",
+    "minecraft:cave_spider"
+  ],
+  "material": "meat",
+  "height": 24,
+  "crawl": {
+    "pitch": 0,
+    "lift": -0.45,
+    "shift": 0
+  },
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        15,
+        -3
+      ],
+      "box": [
+        -4,
+        -4,
+        -8,
+        4,
+        4,
+        0
+      ],
+      "boneScale": 0.4,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 3
+        }
+      ]
+    },
+    {
+      "name": "body0",
+      "pivot": [
+        0,
+        15,
+        0
+      ],
+      "box": [
+        -3,
+        -3,
+        -3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "body1",
+      "pivot": [
+        0,
+        15,
+        9
+      ],
+      "box": [
+        -5,
+        -4,
+        -6,
+        5,
+        4,
+        6
+      ]
+    },
+    {
+      "name": "right_hind_leg",
+      "pivot": [
+        -4,
+        15,
+        2
+      ],
+      "rot": [
+        0,
+        0.7854,
+        -0.7854
+      ],
+      "box": [
+        -15,
+        -1,
+        -1,
+        1,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "right_middle_hind_leg",
+      "pivot": [
+        -4,
+        15,
+        1
+      ],
+      "rot": [
+        0,
+        0.3927,
+        -0.5812
+      ],
+      "box": [
+        -15,
+        -1,
+        -1,
+        1,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "right_middle_front_leg",
+      "pivot": [
+        -4,
+        15,
+        0
+      ],
+      "rot": [
+        0,
+        -0.3927,
+        -0.5812
+      ],
+      "box": [
+        -15,
+        -1,
+        -1,
+        1,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "right_front_leg",
+      "pivot": [
+        -4,
+        15,
+        -1
+      ],
+      "rot": [
+        0,
+        -0.7854,
+        -0.7854
+      ],
+      "box": [
+        -15,
+        -1,
+        -1,
+        1,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "left_hind_leg",
+      "pivot": [
+        4,
+        15,
+        2
+      ],
+      "rot": [
+        0,
+        -0.7854,
+        0.7854
+      ],
+      "box": [
+        -1,
+        -1,
+        -1,
+        15,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "left_middle_hind_leg",
+      "pivot": [
+        4,
+        15,
+        1
+      ],
+      "rot": [
+        0,
+        -0.3927,
+        0.5812
+      ],
+      "box": [
+        -1,
+        -1,
+        -1,
+        15,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "left_middle_front_leg",
+      "pivot": [
+        4,
+        15,
+        0
+      ],
+      "rot": [
+        0,
+        0.3927,
+        0.5812
+      ],
+      "box": [
+        -1,
+        -1,
+        -1,
+        15,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    },
+    {
+      "name": "left_front_leg",
+      "pivot": [
+        4,
+        15,
+        -1
+      ],
+      "rot": [
+        0,
+        0.7854,
+        0.7854
+      ],
+      "box": [
+        -1,
+        -1,
+        -1,
+        15,
+        1,
+        1
+      ],
+      "leg": true,
+      "boneScale": 0.2,
+      "segments": [
+        {
+          "name": "leg",
+          "cut": 0,
+          "durability": 4
+        }
+      ]
+    }
+  ]
+}

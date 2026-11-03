@@ -1,0 +1,162 @@
+{
+  "id": "chicken",
+  "entities": [
+    "minecraft:chicken"
+  ],
+  "material": "meat",
+  "height": 24,
+  "crawl": {
+    "pitch": 0,
+    "lift": -0.3125,
+    "shift": 0
+  },
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        15,
+        -4
+      ],
+      "box": [
+        -2,
+        -6,
+        -2,
+        2,
+        0,
+        1
+      ],
+      "overlays": [
+        "beak",
+        "red_thing"
+      ],
+      "boneScale": 0.25,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 1
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        16,
+        0
+      ],
+      "rot": [
+        1.5707964,
+        0,
+        0
+      ],
+      "box": [
+        -3,
+        -4,
+        -3,
+        3,
+        4,
+        3
+      ]
+    },
+    {
+      "name": "right_wing",
+      "pivot": [
+        -4,
+        13,
+        0
+      ],
+      "box": [
+        0,
+        0,
+        -3,
+        1,
+        4,
+        3
+      ],
+      "boneScale": 0.15,
+      "segments": [
+        {
+          "name": "wing",
+          "cut": 0,
+          "durability": 2
+        }
+      ]
+    },
+    {
+      "name": "left_wing",
+      "pivot": [
+        4,
+        13,
+        0
+      ],
+      "box": [
+        -1,
+        0,
+        -3,
+        0,
+        4,
+        3
+      ],
+      "boneScale": 0.15,
+      "segments": [
+        {
+          "name": "wing",
+          "cut": 0,
+          "durability": 2
+        }
+      ]
+    },
+    {
+      "name": "right_leg",
+      "pivot": [
+        -2,
+        19,
+        1
+      ],
+      "box": [
+        -1,
+        0,
+        -3,
+        2,
+        5,
+        0
+      ],
+      "leg": true,
+      "boneScale": 0.15,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 2,
+          "durability": 2
+        }
+      ]
+    },
+    {
+      "name": "left_leg",
+      "pivot": [
+        1,
+        19,
+        1
+      ],
+      "box": [
+        -1,
+        0,
+        -3,
+        2,
+        5,
+        0
+      ],
+      "leg": true,
+      "boneScale": 0.15,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 2,
+          "durability": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "id": "iron_golem",
+  "entities": [
+    "minecraft:iron_golem"
+  ],
+  "material": "bone",
+  "height": 44,
+  "parts": [
+    {
+      "name": "head",
+      "pivot": [
+        0,
+        -7,
+        -2
+      ],
+      "box": [
+        -4,
+        -12,
+        -5.5,
+        4,
+        -2,
+        2.5
+      ],
+      "boneScale": 0.5,
+      "segments": [
+        {
+          "name": "neck",
+          "cut": 0,
+          "hits": 3
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "pivot": [
+        0,
+        -7,
+        0
+      ],
+      "box": [
+        -9,
+        -2,
+        -6,
+        9,
+        15,
+        5
+      ]
+    },
+    {
+      "name": "right_arm",
+      "pivot": [
+        0,
+        -7,
+        0
+      ],
+      "box": [
+        -13,
+        -2.5,
+        -3,
+        -9,
+        27.5,
+        3
+      ],
+      "hand": "right",
+      "boneScale": 0.45,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 10,
+          "durability": 24
+        },
+        {
+          "name": "lower",
+          "cut": 20,
+          "durability": 16
+        }
+      ]
+    },
+    {
+      "name": "left_arm",
+      "pivot": [
+        0,
+        -7,
+        0
+      ],
+      "box": [
+        9,
+        -2.5,
+        -3,
+        13,
+        27.5,
+        3
+      ],
+      "hand": "left",
+      "boneScale": 0.45,
+      "segments": [
+        {
+          "name": "upper",
+          "cut": 10,
+          "durability": 24
+        },
+        {
+          "name": "lower",
+          "cut": 20,
+          "durability": 16
+        }
+      ]
+    },
+    {
+      "name": "right_leg",
+      "pivot": [
+        -4,
+        11,
+        0
+      ],
+      "box": [
+        -3.5,
+        -3,
+        -3,
+        2.5,
+        13,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.45,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 8,
+          "durability": 22
+        }
+      ]
+    },
+    {
+      "name": "left_leg",
+      "pivot": [
+        5,
+        11,
+        0
+      ],
+      "box": [
+        -3.5,
+        -3,
+        -3,
+        2.5,
+        13,
+        2
+      ],
+      "leg": true,
+      "boneScale": 0.45,
+      "segments": [
+        {
+          "name": "limb",
+          "cut": 8,
+          "durability": 22
+        }
+      ]
+    }
+  ]
+}
