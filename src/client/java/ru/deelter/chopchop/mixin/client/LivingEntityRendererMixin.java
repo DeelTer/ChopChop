@@ -54,7 +54,7 @@ public abstract class LivingEntityRendererMixin {
 		float lx = body.dx() * cos - body.dz() * sin;
 		float lz = body.dx() * sin + body.dz() * cos;
 		((ChopRenderState) state).chopchop$setCorpse(new float[]{lx, lz, body.angle(partialTicks), body.roll(), body.sink(partialTicks),
-				entity.getBbWidth()});
+				body.width()});
 	}
 
 	/**
@@ -85,7 +85,8 @@ public abstract class LivingEntityRendererMixin {
 	private static void chopchop$lie(PoseStack poseStack, float[] corpse) {
 		float lx = corpse[0], lz = corpse[1], angle = corpse[2], roll = corpse[3], sink = corpse[4], width = corpse[5];
 		float lying = (float) Math.sin(angle);
-		poseStack.translate(0, lying * width * 0.4F - sink * 0.45F, 0);
+		// half the thickness of the thickest part (a head is half the width of the body standing)
+		poseStack.translate(0, lying * width * 0.42F - sink * 0.45F, 0);
 		// about up x fall: the top goes the way of the fall
 		org.joml.Vector3f axis = new org.joml.Vector3f(lz, 0, -lx);
 		if (axis.lengthSquared() < 1e-6F) axis.set(1, 0, 0);

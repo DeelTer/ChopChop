@@ -83,6 +83,7 @@ public final class Corpses {
 		final Vec3[] offset = {Vec3.ZERO, Vec3.ZERO};
 		Vec3 velocity = Vec3.ZERO;
 		float height = 1.8F;
+		float width = 0.6F;
 		/**
 		 * ticks left of sinking away, -1 while it lies
 		 */
@@ -133,6 +134,13 @@ public final class Corpses {
 		public float roll() {
 			return roll;
 		}
+
+		/**
+		 * width of the body standing, blocks: half its thickness lifts it off the ground as it lies
+		 */
+		public float width() {
+			return width;
+		}
 	}
 
 	public static void add(Protocol.Message.Corpse message) {
@@ -156,15 +164,24 @@ public final class Corpses {
 				ClientWounds.get(id);
 			}
 			Body body = new Body(message, id, copy, player.getId());
-			body.height = player.getBbHeight();
+			size(body, player);
 			pickWay(level, copy, body);
 			BODIES.put(id, body);
 		} else {
 			Body body = new Body(message, message.entityId(), null, -1);
-			body.height = living.getBbHeight();
+			size(body, living);
 			pickWay(level, living, body);
 			BODIES.put(message.entityId(), body);
 		}
+	}
+
+	/**
+	 * The size of the body standing: a dead entity has the tiny box of the dying pose.
+	 */
+	private static void size(Body body, LivingEntity entity) {
+		var standing = entity.getDimensions(Pose.STANDING);
+		body.height = Math.max(0.3F, standing.height());
+		body.width = Math.max(0.2F, standing.width());
 	}
 
 	/**
@@ -283,39 +300,79 @@ public final class Corpses {
 		float lying = (float) Math.sin(body.angle);
 		// the middle of the body, where most of the weight is: half its height along the fall
 		Vec3 middle = feet.add(body.dx * body.height * 0.5 * lying, 0, body.dz * body.height * 0.5 * lying);
-		boolean feetHeld = solidUnder(level, feet), middleHeld = solidUnder(level, middle);
+		double ground = ground(level, feet, body);
+		boolean held = !Double.isNaN(ground) && feet.y <= ground + 0.03;
+		boolean middleHeld = !Double.isNaN(columnTop(level, middle, feet.y));
 		Vec3 v = body.velocity;
 		boolean moving = v.lengthSqr() > 1e-5;
-		if (feetHeld && middleHeld && !moving) {
+		if (held && middleHeld && !moving && feet.y >= ground - 1e-3) {
 			if (body.age > 60 && body.landed) body.asleep = true;
 			return;
 		}
 		body.asleep = false;
-		if (!middleHeld && feetHeld && body.landed) {
+		if (!middleHeld && held && body.landed) {
 			// tips over the edge, the way the weight hangs
 			v = v.add(body.dx * 0.03, 0, body.dz * 0.03);
 		}
-		if (!feetHeld || v.y > 0) v = v.add(0, -0.06, 0);
+		if (!held || v.y > 0) v = v.add(0, -0.06, 0);
 		v = v.multiply(0.9, 0.98, 0.9);
 		Vec3 next = body.offset[1].add(v);
 		Vec3 nextFeet = entity.position().add(next);
-		if (v.y < 0 && solidUnder(level, nextFeet.add(0, 0.06, 0))) {
-			// lands on the top of the block under it
-			BlockPosHelper top = BlockPosHelper.top(level, nextFeet.add(0, 0.06, 0));
-			next = new Vec3(next.x, top.y - entity.getY(), next.z);
-			v = v.y < -0.25 ? new Vec3(v.x * 0.5, -v.y * 0.25, v.z * 0.5) : new Vec3(v.x * 0.6, 0, v.z * 0.6);
-		}
 		// never into a block: not the feet, not anything along the body as it lies
-		if (blocked(level, nextFeet.add(0, 0.2, 0)) || !clear(level, nextFeet, body, body.angle)) {
+		if (!clear(level, nextFeet, body, body.angle)) {
 			v = new Vec3(0, Math.min(0, v.y), 0);
 			next = new Vec3(body.offset[1].x, next.y, body.offset[1].z);
-			if (!clear(level, entity.position().add(next), body, body.angle)) {
+			nextFeet = entity.position().add(next);
+			if (!clear(level, nextFeet, body, body.angle)) {
 				next = body.offset[1];
+				nextFeet = feet;
 				v = Vec3.ZERO;
 			}
 		}
+		// lands on (or is lifted onto) the highest ground under it: a carpet, a slab, a step count as ground
+		double under = ground(level, nextFeet, body);
+		if (!Double.isNaN(under) && nextFeet.y <= under) {
+			next = new Vec3(next.x, under - entity.getY(), next.z);
+			v = v.y < -0.25 ? new Vec3(v.x * 0.5, -v.y * 0.25, v.z * 0.5) : new Vec3(v.x * 0.6, 0, v.z * 0.6);
+		}
 		body.velocity = v.lengthSqr() < 1e-5 ? Vec3.ZERO : v;
-		body.offset[1] = v.lengthSqr() < 1e-5 ? body.offset[1] : next;
+		body.offset[1] = next;
+	}
+
+	/**
+	 * blocks up to this high above the feet are ground to lie on, not something in the way
+	 */
+	private static final double LOW = 0.5;
+
+	/**
+	 * The highest ground under the body as it lies (under its feet and along its length), world y; NaN with none
+	 * within reach below.
+	 */
+	private static double ground(ClientLevel level, Vec3 feet, Body body) {
+		double best = columnTop(level, feet, feet.y);
+		double sin = Math.sin(body.angle);
+		for (double t = 0.3; t <= 1.0001; t += 0.35) {
+			double along = body.height * t * sin;
+			double top = columnTop(level, feet.add(body.dx * along, 0, body.dz * along), feet.y);
+			if (!Double.isNaN(top) && (Double.isNaN(best) || top > best)) best = top;
+		}
+		return best;
+	}
+
+	/**
+	 * The top of what is under a point, from {@link #LOW} above the feet down to a block below; NaN if nothing.
+	 */
+	private static double columnTop(ClientLevel level, Vec3 at, double feetY) {
+		int x = net.minecraft.util.Mth.floor(at.x), z = net.minecraft.util.Mth.floor(at.z);
+		for (int y = net.minecraft.util.Mth.floor(feetY + LOW); y >= net.minecraft.util.Mth.floor(feetY) - 1; y--) {
+			var pos = new net.minecraft.core.BlockPos(x, y, z);
+			var shape = level.getBlockState(pos).getCollisionShape(level, pos);
+			if (shape.isEmpty()) continue;
+			double top = y + shape.max(net.minecraft.core.Direction.Axis.Y);
+			if (top <= feetY + LOW + 1e-3) return top;
+			return Double.NaN;
+		}
+		return Double.NaN;
 	}
 
 	/**
@@ -350,7 +407,7 @@ public final class Corpses {
 		for (double t = 0.3; t <= 1.0001; t += 0.175) {
 			double along = body.height * t;
 			Vec3 point = feet.add(body.dx * along * sin, along * cos + 0.12, body.dz * along * sin);
-			if (blocked(level, point)) return false;
+			if (blockedAbove(level, point, feet.y)) return false;
 		}
 		return true;
 	}
@@ -373,40 +430,15 @@ public final class Corpses {
 		body.dz = dz;
 	}
 
-	private static boolean solidUnder(ClientLevel level, Vec3 at) {
-		var pos = net.minecraft.core.BlockPos.containing(at.x, at.y - 0.05, at.z);
-		return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
-	}
-
-	private static boolean blocked(ClientLevel level, Vec3 at) {
-		var pos = net.minecraft.core.BlockPos.containing(at.x, at.y, at.z);
-		return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
-	}
-
-	private record BlockPosHelper(double y) {
-		static BlockPosHelper top(ClientLevel level, Vec3 at) {
-			var pos = net.minecraft.core.BlockPos.containing(at.x, at.y - 0.05, at.z);
-			var shape = level.getBlockState(pos).getCollisionShape(level, pos);
-			return new BlockPosHelper(pos.getY() + (shape.isEmpty() ? 0 : shape.max(net.minecraft.core.Direction.Axis.Y)));
-		}
-	}
-
 	/**
-	 * While the real player still lies dying the copy moves with it (the knockback of the last blow) and takes its
-	 * newest wounds: on Paper they come a tick after the death, a head blown off by the same blast included.
+	 * In a block that rises above the low ground: a carpet or a slab under the body is not in its way.
 	 */
-	private static void follow(ClientLevel level, Body body) {
-		body.copy.setOldPosAndRot();
-		// only the newest body of a player follows it: it may have died again since
-		if (!Objects.equals(HIDDEN.get(body.sourceId), body.entityId)) return;
-		Entity real = level.getEntity(body.sourceId);
-		if (!(real instanceof LivingEntity living) || !living.isDeadOrDying()) return;
-		body.copy.setPos(real.getX(), real.getY(), real.getZ());
-		WoundState wounds = ClientWounds.get(body.sourceId);
-		if (wounds != null) {
-			ClientWounds.put(body.entityId, wounds);
-			ClientWounds.get(body.entityId);
-		}
+	private static boolean blockedAbove(ClientLevel level, Vec3 at, double feetY) {
+		var pos = net.minecraft.core.BlockPos.containing(at.x, at.y, at.z);
+		var shape = level.getBlockState(pos).getCollisionShape(level, pos);
+		if (shape.isEmpty()) return false;
+		return pos.getY() + shape.max(net.minecraft.core.Direction.Axis.Y) > feetY + LOW + 1e-3
+				|| pos.getY() + shape.min(net.minecraft.core.Direction.Axis.Y) > at.y;
 	}
 
 	/**
