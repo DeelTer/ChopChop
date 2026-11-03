@@ -35,6 +35,8 @@ public final class Effects {
 	private static final DustParticleOptions BLOOD = new DustParticleOptions(0x9E1A1A, 1.1F);
 	private static final DustParticleOptions BLOOD_DARK = new DustParticleOptions(0x6B0F12, 0.8F);
 	private static final DustParticleOptions BONE_DUST = new DustParticleOptions(0xE9E2CC, 0.9F);
+	private static final DustParticleOptions GOO = new DustParticleOptions(0x5DA64A, 1.1F);
+	private static final DustParticleOptions GOO_DARK = new DustParticleOptions(0x386B2C, 0.8F);
 
 	private Effects() {
 	}
@@ -72,7 +74,8 @@ public final class Effects {
 			int count = (int) Math.round(base * config.getParticleAmount());
 			RandomSource random = level.getRandom();
 			for (int i = 0; i < count; i++) {
-				DustParticleOptions dust = bleeds ? (random.nextInt(3) == 0 ? BLOOD_DARK : BLOOD) : BONE_DUST;
+				boolean dark = random.nextInt(3) == 0;
+				DustParticleOptions dust = Material.goo(material) ? (dark ? GOO_DARK : GOO) : bleeds ? (dark ? BLOOD_DARK : BLOOD) : BONE_DUST;
 				double speed = event.kind() == Protocol.EVENT_BLAST ? 0.4 : event.kind() == Protocol.EVENT_SEVER ? 0.25 : 0.12;
 				level.addParticle(dust, at.x, at.y, at.z,
 						random.nextGaussian() * speed, random.nextDouble() * speed + 0.05, random.nextGaussian() * speed);
@@ -175,7 +178,9 @@ public final class Effects {
 			int count = Math.max(1, (int) Math.round(2 * ClientConfig.get().getParticleAmount()));
 			RandomSource random = level.getRandom();
 			for (int i = 0; i < count; i++) {
-				level.addParticle(random.nextInt(3) == 0 ? BLOOD_DARK : BLOOD, at.x, at.y, at.z,
+				boolean dark = random.nextInt(3) == 0;
+				boolean goo = Material.goo(part.getMaterial());
+				level.addParticle(goo ? (dark ? GOO_DARK : GOO) : dark ? BLOOD_DARK : BLOOD, at.x, at.y, at.z,
 						out.x + random.nextGaussian() * 0.04, out.y + random.nextDouble() * 0.06, out.z + random.nextGaussian() * 0.04);
 			}
 		}

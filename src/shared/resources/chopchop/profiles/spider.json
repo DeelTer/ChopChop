@@ -4,7 +4,7 @@
     "minecraft:spider",
     "minecraft:cave_spider"
   ],
-  "material": "meat",
+  "material": "slime",
   "height": 24,
   "crawl": {
     "pitch": 0,

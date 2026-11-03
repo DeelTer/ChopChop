@@ -27,6 +27,7 @@ import java.util.function.Function;
 public final class GoreRender {
 	public static final Identifier MEAT = Identifier.fromNamespaceAndPath(ChopChop.ID, "textures/entity/meat.png");
 	public static final Identifier BONE = Identifier.fromNamespaceAndPath(ChopChop.ID, "textures/entity/bone.png");
+	public static final Identifier SLIME = Identifier.fromNamespaceAndPath(ChopChop.ID, "textures/entity/slime_inside.png");
 
 	/**
 	 * How a model drawn for a wounded entity shows the wounds.
@@ -53,6 +54,7 @@ public final class GoreRender {
 	private static int light, overlay;
 	private static final Sink.Buffer MEAT_QUADS = new Sink.Buffer();
 	private static final Sink.Buffer BONE_QUADS = new Sink.Buffer();
+	private static final Sink.Buffer SLIME_QUADS = new Sink.Buffer();
 	/**
 	 * the skeleton inside, drawn with its own texture
 	 */
@@ -64,6 +66,21 @@ public final class GoreRender {
 
 	public static RenderType meatType() {
 		return RenderTypes.entityCutout(MEAT);
+	}
+
+	public static RenderType slimeType() {
+		return RenderTypes.entityCutout(SLIME);
+	}
+
+	/**
+	 * the texture of what is inside a part of this material
+	 */
+	public static Identifier insideTexture(String material) {
+		return Material.goo(material) ? SLIME : Material.bleeds(material) ? MEAT : BONE;
+	}
+
+	public static RenderType insideType(String material) {
+		return RenderTypes.entityCutout(insideTexture(material));
 	}
 
 	public static RenderType boneType() {
@@ -87,6 +104,7 @@ public final class GoreRender {
 		gore = withGore && drawRole == Role.MAIN;
 		MEAT_QUADS.clear();
 		BONE_QUADS.clear();
+		SLIME_QUADS.clear();
 		SKELETON_QUADS.clear();
 		skeletonTexture = wounds == null || !ClientConfig.get().isSkeletonInside() ? null : SkeletonTexture.of(wounds.getProfile());
 	}
@@ -103,6 +121,7 @@ public final class GoreRender {
 			try {
 				MEAT_QUADS.flush(buffers, meatType(), -1, light, overlay);
 				BONE_QUADS.flush(buffers, boneType(), -1, light, overlay);
+				SLIME_QUADS.flush(buffers, slimeType(), -1, light, overlay);
 				if (skeletonTexture != null) SKELETON_QUADS.flush(buffers, skeletonTexture.type(), -1, light, overlay);
 			} finally {
 				reset();
@@ -115,6 +134,7 @@ public final class GoreRender {
 		role = null;
 		MEAT_QUADS.clear();
 		BONE_QUADS.clear();
+		SLIME_QUADS.clear();
 		SKELETON_QUADS.clear();
 		skeletonTexture = null;
 	}
@@ -159,7 +179,7 @@ public final class GoreRender {
 			light = lightCoords;
 			overlay = overlayCoords;
 			String material = part.getMaterial();
-			Sink inside = Material.bleeds(material) ? MEAT_QUADS : BONE_QUADS;
+			Sink inside = Material.goo(material) ? SLIME_QUADS : Material.bleeds(material) ? MEAT_QUADS : BONE_QUADS;
 			VoxelMesher.inside(grid, mask, material, pose, inside, part.getSkeleton(), skeletonTexture, SKELETON_QUADS);
 			// boneScale 0: a body without bones (a spider, a slime), its stumps are meat only
 			boolean bone = Material.bleeds(material) && ClientConfig.get().isBones() && part.getBoneScale() > 0;

@@ -787,5 +787,13 @@ class CoreTest {
 			}
 		}
 		assertTrue(PROFILES.byId("cow").part("right_hind_leg").getBoneScale() > 0, "a cow has bones");
+		// green goo inside: it is cut and bleeds like meat, only green
+		for (String id : new String[]{"spider", "slime"}) {
+			String material = PROFILES.byId(id).part(0).getMaterial();
+			assertEquals(ru.deelter.chopchop.core.profile.Material.SLIME, material);
+			assertTrue(ru.deelter.chopchop.core.profile.Material.bleeds(material));
+			assertTrue(ru.deelter.chopchop.core.profile.Material.goo(material));
+		}
+		assertFalse(ru.deelter.chopchop.core.profile.Material.goo(PROFILES.byId("zombie").getMaterial()));
 	}
 }

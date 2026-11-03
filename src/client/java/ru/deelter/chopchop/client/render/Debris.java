@@ -412,8 +412,8 @@ public final class Debris {
 				if (piece == c.pieces.getFirst()) {
 					String material = c.part.getMaterial();
 					boolean meat = Material.bleeds(material);
-					RenderType inside = translucent ? RenderTypes.entityTranslucent(meat ? GoreRender.MEAT : GoreRender.BONE)
-							: meat ? GoreRender.meatType() : GoreRender.boneType();
+					RenderType inside = translucent ? RenderTypes.entityTranslucent(GoreRender.insideTexture(material))
+							: GoreRender.insideType(material);
 					SkeletonTexture skeleton = c.skeleton;
 					Sink nowhere = (x, y, z, u, v, nx, ny, nz, shade) -> {
 					};
