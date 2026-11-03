@@ -13,6 +13,7 @@
   "chopchop.config.debrisKick": "Players kick severed limbs about",
   "chopchop.config.corpses": "Dead mobs stay as bodies",
   "chopchop.config.bones": "Bones in stumps",
+  "chopchop.config.skeletonInside": "Skeleton inside bodies (skull, ribs, spine)",
   "chopchop.config.firstPerson": "Wounds on your own hands",
   "chopchop.config.hideItems": "Hide items in severed hands",
   "chopchop.config.maxDistance": "Small wounds up to, blocks",

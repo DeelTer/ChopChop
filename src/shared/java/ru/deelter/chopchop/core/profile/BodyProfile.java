@@ -30,6 +30,11 @@ public final class BodyProfile {
 	 */
 	private Crawl crawl;
 	private List<BodyPart> parts = List.of();
+	/**
+	 * the texture the bones of {@link BodyPart#getSkeleton} are drawn with, and its size in pixels
+	 */
+	private String skeletonTexture = "minecraft:textures/entity/skeleton/skeleton.png";
+	private int[] skeletonTextureSize = {64, 32};
 
 	private transient Map<String, BodyPart> byName;
 	/**

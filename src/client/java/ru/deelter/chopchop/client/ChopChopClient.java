@@ -46,6 +46,8 @@ public final class ChopChopClient implements ClientModInitializer {
 			Debris.clear();
 			Effects.clear();
 			Corpses.clear();
+			// resource packs may have changed since the last world: the bones texture is read again
+			ru.deelter.chopchop.client.render.SkeletonTexture.reset();
 			helloSent = false;
 			// a server without ChopChop does not listen on the channel, and hears nothing
 			if (ClientPlayNetworking.canSend(ChopPayload.TYPE)) sayHello();

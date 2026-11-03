@@ -53,6 +53,11 @@ public final class GoreRender {
 	private static int light, overlay;
 	private static final Sink.Buffer MEAT_QUADS = new Sink.Buffer();
 	private static final Sink.Buffer BONE_QUADS = new Sink.Buffer();
+	/**
+	 * the skeleton inside, drawn with its own texture
+	 */
+	private static final Sink.Buffer SKELETON_QUADS = new Sink.Buffer();
+	private static SkeletonTexture skeletonTexture;
 
 	private GoreRender() {
 	}
@@ -82,6 +87,8 @@ public final class GoreRender {
 		gore = withGore && drawRole == Role.MAIN;
 		MEAT_QUADS.clear();
 		BONE_QUADS.clear();
+		SKELETON_QUADS.clear();
+		skeletonTexture = wounds == null || !ClientConfig.get().isSkeletonInside() ? null : SkeletonTexture.of(wounds.getProfile());
 	}
 
 	public static boolean active() {
@@ -96,6 +103,7 @@ public final class GoreRender {
 			try {
 				MEAT_QUADS.flush(buffers, meatType(), -1, light, overlay);
 				BONE_QUADS.flush(buffers, boneType(), -1, light, overlay);
+				if (skeletonTexture != null) SKELETON_QUADS.flush(buffers, skeletonTexture.type(), -1, light, overlay);
 			} finally {
 				reset();
 			}
@@ -107,6 +115,8 @@ public final class GoreRender {
 		role = null;
 		MEAT_QUADS.clear();
 		BONE_QUADS.clear();
+		SKELETON_QUADS.clear();
+		skeletonTexture = null;
 	}
 
 	/**
@@ -135,7 +145,7 @@ public final class GoreRender {
 			overlay = overlayCoords;
 			String material = part.getMaterial();
 			Sink inside = Material.bleeds(material) ? MEAT_QUADS : BONE_QUADS;
-			VoxelMesher.inside(grid, mask, material, pose, inside);
+			VoxelMesher.inside(grid, mask, material, pose, inside, part.getSkeleton(), skeletonTexture, SKELETON_QUADS);
 			boolean bone = Material.bleeds(material) && ClientConfig.get().isBones();
 			if (partState.getSeveredAt() == 0) {
 				// the whole part is off, a head: the stump is where it sat, a neck of meat with the bone standing out

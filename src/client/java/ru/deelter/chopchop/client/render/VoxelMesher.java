@@ -99,6 +99,18 @@ public final class VoxelMesher {
 	 * The faces of meat between voxels that are there and voxels that are gone, inside the grid only.
 	 */
 	public static void inside(Grid grid, VoxelMask mask, String material, PoseStack.Pose pose, Sink sink) {
+		inside(grid, mask, material, pose, sink, null, null, null);
+	}
+
+	/**
+	 * The same with a skeleton inside: a face of a voxel that is bone shows the texel of the bone's texture there,
+	 * into {@code bones}; meat where the texture is see-through (between the ribs) or the bone is patchy.
+	 *
+	 * @param skeleton the bone of the part, null for none
+	 */
+	public static void inside(Grid grid, VoxelMask mask, String material, PoseStack.Pose pose, Sink sink,
+							  ru.deelter.chopchop.core.profile.BodyPart.Skeleton skeleton, SkeletonTexture texture, Sink bones) {
+		boolean skeletal = skeleton != null && texture != null && bones != null && skeleton.cube() != null && skeleton.uv() != null;
 		float[] uv = Material.bleeds(material) ? MEAT_UV : BONE_INSIDE_UV;
 		boolean meat = Material.bleeds(material);
 		Matrix4f matrix = pose.pose();
@@ -113,6 +125,7 @@ public final class VoxelMesher {
 						if (nx < 0 || ny < 0 || nz < 0 || nx >= grid.gx || ny >= grid.gy || nz >= grid.gz) continue;
 						if (!mask.gone(nx, ny, nz)) continue;
 						pose.transformNormal(d[0], d[1], d[2], n);
+						if (skeletal && bone(grid, x, y, z, d, skeleton, texture, matrix, p, n, bones)) continue;
 						face(grid, x, y, z, d, uv, matrix, p, n, sink, meat ? SHADES[Math.min(SHADES.length - 1, depth(grid, x, y, z))] : 1F);
 					}
 				}
@@ -137,6 +150,21 @@ public final class VoxelMesher {
 
 	private static void face(Grid g, int x, int y, int z, int[] d, float[] uv, Matrix4f matrix, Vector3f p, Vector3f n, Sink sink) {
 		face(g, x, y, z, d, uv, matrix, p, n, sink, 1F);
+	}
+
+	/**
+	 * A face of a bone voxel, drawn with its texel of the skeleton texture.
+	 *
+	 * @return false when the voxel is not bone or its texel is see-through: then it is meat
+	 */
+	private static boolean bone(Grid g, int x, int y, int z, int[] d, ru.deelter.chopchop.core.profile.BodyPart.Skeleton skeleton,
+								SkeletonTexture texture, Matrix4f matrix, Vector3f p, Vector3f n, Sink bones) {
+		float px = g.ox + (x + 0.5F) * g.sx, py = g.oy + (y + 0.5F) * g.sy, pz = g.oz + (z + 0.5F) * g.sz;
+		if (!skeleton.holds(px, py, pz) || skeleton.patch(x, y, z)) return false;
+		int[] texel = skeleton.texel(px, py, pz, d);
+		if (!texture.solid(texel[0], texel[1])) return false;
+		face(g, x, y, z, d, texture.uv(texel[0], texel[1]), matrix, p, n, bones, 1F);
+		return true;
 	}
 
 	private static void face(Grid g, int x, int y, int z, int[] d, float[] uv, Matrix4f matrix, Vector3f p, Vector3f n, Sink sink, float shade) {

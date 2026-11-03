@@ -77,6 +77,10 @@ public final class Debris {
 		 * ticks left of fading out, -1 while it is not
 		 */
 		int fadeLeft = -1;
+		/**
+		 * the bones inside, null for none
+		 */
+		SkeletonTexture skeleton;
 		final BodyPart part;
 		final VoxelMask mask;
 		final int cut;
@@ -223,6 +227,7 @@ public final class Debris {
 				}
 			}
 			Chunk chunk = new Chunk(skin, texture, part, mask, cut, pieces, center, entity, size, detach.flung(), detach.away(), level.getRandom());
+			if (ClientConfig.get().isSkeletonInside()) chunk.skeleton = SkeletonTexture.of(state.getProfile());
 			CHUNKS.add(chunk);
 			if (chunk.head && Minecraft.getInstance().player != null && entityId == Minecraft.getInstance().player.getId()) {
 				HeadCam.follow(chunk);
@@ -409,12 +414,21 @@ public final class Debris {
 					boolean meat = Material.bleeds(material);
 					RenderType inside = translucent ? RenderTypes.entityTranslucent(meat ? GoreRender.MEAT : GoreRender.BONE)
 							: meat ? GoreRender.meatType() : GoreRender.boneType();
+					SkeletonTexture skeleton = c.skeleton;
+					Sink nowhere = (x, y, z, u, v, nx, ny, nz, shade) -> {
+					};
 					collector.submitCustomGeometry(stack, inside, (pose, consumer) -> {
 						Sink sink = Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY);
-						VoxelMesher.inside(grid, c.mask, material, pose, sink);
+						// the meat here, the bones in a draw of their own texture
+						VoxelMesher.inside(grid, c.mask, material, pose, sink, c.part.getSkeleton(), skeleton, nowhere);
 						// a head has its neck at the bottom
 						if (c.cut == 0) VoxelMesher.neck(grid, grid.gy(), true, pose, sink);
 					});
+					if (skeleton != null && c.part.getSkeleton() != null) {
+						collector.submitCustomGeometry(stack, translucent ? skeleton.translucentType() : skeleton.type(), (pose, consumer) ->
+								VoxelMesher.inside(grid, c.mask, material, pose, nowhere, c.part.getSkeleton(), skeleton,
+										Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));
+					}
 					if (meat && bones) {
 						int row = c.cut == 0 ? grid.gy() : c.cut;
 						collector.submitCustomGeometry(stack, translucent ? RenderTypes.entityTranslucent(GoreRender.BONE) : GoreRender.boneType(),

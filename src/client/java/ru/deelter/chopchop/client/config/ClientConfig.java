@@ -42,6 +42,10 @@ public final class ClientConfig {
 	 */
 	private boolean debrisKick = true;
 	private boolean bones = true;
+	/**
+	 * the bones of a vanilla skeleton inside humanoid bodies: a deep wound shows the skull, the ribs, the spine
+	 */
+	private boolean skeletonInside = true;
 	private boolean firstPerson = true;
 	private boolean hideItems = true;
 	private int maxDistance = 64;

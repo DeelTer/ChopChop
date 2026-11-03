@@ -45,6 +45,8 @@ public final class ClothScreen {
 				.setDefaultValue(defaults.isCorpses()).setSaveConsumer(config::setCorpses).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.bones"), config.isBones())
 				.setDefaultValue(defaults.isBones()).setSaveConsumer(config::setBones).build());
+		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.skeletonInside"), config.isSkeletonInside())
+				.setDefaultValue(defaults.isSkeletonInside()).setSaveConsumer(config::setSkeletonInside).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.firstPerson"), config.isFirstPerson())
 				.setDefaultValue(defaults.isFirstPerson()).setSaveConsumer(config::setFirstPerson).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.hideItems"), config.isHideItems())

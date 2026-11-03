@@ -13,6 +13,7 @@
   "chopchop.config.debrisKick": "Игроки пинают отрубленные части",
   "chopchop.config.corpses": "Мёртвые мобы остаются телами",
   "chopchop.config.bones": "Кости в обрубках",
+  "chopchop.config.skeletonInside": "Скелет внутри тел (череп, рёбра, позвоночник)",
   "chopchop.config.firstPerson": "Раны на своих руках",
   "chopchop.config.hideItems": "Прятать предметы в отрубленной руке",
   "chopchop.config.maxDistance": "Мелкие раны видны до, блоков",

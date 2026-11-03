@@ -575,4 +575,41 @@ class CoreTest {
 		var message = (Protocol.Message.Corpse) Protocol.readClientbound(Protocol.corpse(3, 1, 0, 0.5F, 1, 100, -9), PROFILES);
 		assertEquals(-9, message.corpseId());
 	}
+
+	@Test
+	void horsesHaveBodies() {
+		BodyProfile horse = PROFILES.forEntity("minecraft:horse");
+		assertNotNull(horse);
+		assertEquals("bone", PROFILES.forEntity("minecraft:skeleton_horse").getMaterial());
+		WoundState state = new WoundState(horse);
+		// a blow from the side at the middle of the body finds it, one at the front leg finds the leg
+		BodyPose east = new BodyPose(0, 64, 0, 0, 1, 0);
+		Hit side = HitLocator.cast(state, east, 3, 65.0, 0.1, -1, 0, 0, 6);
+		assertNotNull(side);
+		assertEquals("body", horse.part(side.part()).getName());
+		Hit leg = HitLocator.castOrNearest(state, east, 3, 64.3, 0.6, -1, 0, 0, 6);
+		assertNotNull(leg);
+		assertTrue(horse.part(leg.part()).isLeg(), horse.part(leg.part()).getName());
+		// heads come off, legs too
+		WoundRules rules = new WoundRules();
+		rules.setWoundChance(0);
+		int head = horse.part("head").getIndex();
+		for (int i = 0; i < 3; i++) WoundEngine.apply(state, new Hit(head, 2, 2, 2, new float[3], 0), WeaponKind.AXE, 5, rules, new Random(1));
+		assertTrue(state.headless());
+	}
+
+	@Test
+	void humanoidsHaveASkeletonInside() {
+		var head = PROFILES.byId("zombie").part("head");
+		var skull = head.getSkeleton();
+		assertNotNull(skull);
+		assertTrue(skull.holds(0, -4, 0), "the middle of the head is skull");
+		assertFalse(skull.holds(-3.5F, -4, 0), "its shell is meat");
+		// the face of the skull: the front of the head texture, 8 + x across, 8 + y down
+		assertArrayEquals(new int[]{8 + 4, 8 + 4}, skull.texel(0.5F, -3.5F, -2.5F, new int[]{0, 0, -1}));
+		assertNull(PROFILES.byId("skeleton").part("head").getSkeleton(), "a skeleton is bone already");
+		int patches = 0;
+		for (int i = 0; i < 1000; i++) if (skull.patch(i % 10, i / 10 % 10, i / 100)) patches++;
+		assertTrue(patches > 150 && patches < 350, "about a quarter of the skull shows meat: " + patches);
+	}
 }
