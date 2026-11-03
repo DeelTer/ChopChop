@@ -24,7 +24,7 @@ public final class ClientConfig {
 	private static ClientConfig instance = new ClientConfig();
 
 	private boolean enabled = true;
-	private boolean particles = true;
+	private boolean particles = false;
 	/**
 	 * multiplies the number of particles
 	 */
