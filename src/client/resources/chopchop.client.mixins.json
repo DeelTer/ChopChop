@@ -12,6 +12,7 @@
 		"EntityRenderStateMixin",
 		"ItemInHandLayerMixin",
 		"KeyboardInputMixin",
+		"ExplosionMixin",
 		"FirstPersonItemsMixin",
 		"GameRendererPickMixin",
 		"GuiMixin",

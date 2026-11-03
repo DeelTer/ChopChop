@@ -100,6 +100,7 @@ public final class VoxelMesher {
 	 */
 	public static void inside(Grid grid, VoxelMask mask, String material, PoseStack.Pose pose, Sink sink) {
 		float[] uv = Material.bleeds(material) ? MEAT_UV : BONE_INSIDE_UV;
+		boolean meat = Material.bleeds(material);
 		Matrix4f matrix = pose.pose();
 		Vector3f p = new Vector3f();
 		Vector3f n = new Vector3f();
@@ -112,14 +113,33 @@ public final class VoxelMesher {
 						if (nx < 0 || ny < 0 || nz < 0 || nx >= grid.gx || ny >= grid.gy || nz >= grid.gz) continue;
 						if (!mask.gone(nx, ny, nz)) continue;
 						pose.transformNormal(d[0], d[1], d[2], n);
-						face(grid, x, y, z, d, uv, matrix, p, n, sink);
+						face(grid, x, y, z, d, uv, matrix, p, n, sink, meat ? SHADES[Math.min(SHADES.length - 1, depth(grid, x, y, z))] : 1F);
 					}
 				}
 			}
 		}
 	}
 
+	/**
+	 * Meat is darker the deeper in the body it is: the surface as it is, then two darker shades, never more.
+	 */
+	private static final float[] SHADES = {1F, 0.8F, 0.64F};
+
+	/**
+	 * How many voxels lie between this one and the outside of the grid. The ends of a long part (shoulder, wrist)
+	 * do not count, a stump is cut across them.
+	 */
+	static int depth(Grid g, int x, int y, int z) {
+		int d = Math.min(Math.min(x, g.gx - 1 - x), Math.min(z, g.gz - 1 - z));
+		if (g.gy > Math.max(g.gx, g.gz)) return d;
+		return Math.min(d, Math.min(y, g.gy - 1 - y));
+	}
+
 	private static void face(Grid g, int x, int y, int z, int[] d, float[] uv, Matrix4f matrix, Vector3f p, Vector3f n, Sink sink) {
+		face(g, x, y, z, d, uv, matrix, p, n, sink, 1F);
+	}
+
+	private static void face(Grid g, int x, int y, int z, int[] d, float[] uv, Matrix4f matrix, Vector3f p, Vector3f n, Sink sink, float shade) {
 		float x0 = g.ox + x * g.sx, y0 = g.oy + y * g.sy, z0 = g.oz + z * g.sz;
 		float x1 = x0 + g.sx, y1 = y0 + g.sy, z1 = z0 + g.sz;
 		float[][] c;
@@ -136,7 +156,7 @@ public final class VoxelMesher {
 		float[][] t = {{uv[0], uv[1]}, {uv[2], uv[1]}, {uv[2], uv[3]}, {uv[0], uv[3]}};
 		for (int k = 0; k < 4; k++) {
 			matrix.transformPosition(c[k][0] / 16F, c[k][1] / 16F, c[k][2] / 16F, p);
-			sink.vertex(p.x, p.y, p.z, t[k][0], t[k][1], n.x, n.y, n.z);
+			sink.vertex(p.x, p.y, p.z, t[k][0], t[k][1], n.x, n.y, n.z, shade);
 		}
 	}
 

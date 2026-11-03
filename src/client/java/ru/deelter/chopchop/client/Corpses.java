@@ -77,6 +77,17 @@ public final class Corpses {
 		 * the real player a copy is of, -1 for a mob
 		 */
 		final int sourceId;
+		/**
+		 * where the body moved by itself (slid off an edge, thrown by a blast), on top of where its entity is
+		 */
+		final Vec3[] offset = {Vec3.ZERO, Vec3.ZERO};
+		Vec3 velocity = Vec3.ZERO;
+		float height = 1.8F;
+		/**
+		 * ticks left of sinking away, -1 while it lies
+		 */
+		int sinkLeft = -1;
+		boolean asleep;
 
 		Body(Protocol.Message.Corpse message, int entityId, Player copy, int sourceId) {
 			this.entityId = entityId;
@@ -100,8 +111,15 @@ public final class Corpses {
 		 * 0 until it starts to go, 1 when it is gone
 		 */
 		public float sink(float partial) {
-			float left = ticks - age - partial;
-			return left >= SINK_TICKS ? 0 : 1 - Math.max(0, left) / SINK_TICKS;
+			if (sinkLeft < 0) return 0;
+			return 1 - Math.max(0, sinkLeft - partial) / SINK_TICKS;
+		}
+
+		/**
+		 * how far the body moved by itself, interpolated
+		 */
+		public Vec3 offset(float partial) {
+			return offset[0].lerp(offset[1], partial);
 		}
 
 		public float dx() {
@@ -133,9 +151,13 @@ public final class Corpses {
 			HIDDEN.put(player.getId(), id);
 			WoundState wounds = ClientWounds.get(player.getId());
 			if (wounds != null) ClientWounds.put(id, wounds);
-			BODIES.put(id, new Body(message, id, copy, player.getId()));
+			Body body = new Body(message, id, copy, player.getId());
+			body.height = player.getBbHeight();
+			BODIES.put(id, body);
 		} else {
-			BODIES.put(message.entityId(), new Body(message, message.entityId(), null, -1));
+			Body body = new Body(message, message.entityId(), null, -1);
+			body.height = living.getBbHeight();
+			BODIES.put(message.entityId(), body);
 		}
 	}
 
@@ -202,13 +224,15 @@ public final class Corpses {
 		if (BODIES.isEmpty() || minecraft.isPaused()) return;
 		List<Integer> done = new ArrayList<>();
 		for (Body body : BODIES.values()) {
+			Entity entity = body.copy != null ? body.copy : level.getEntity(body.entityId);
 			if (body.copy != null) {
 				follow(level, body);
-			} else if (level.getEntity(body.entityId) == null) {
+			} else if (entity == null) {
 				done.add(body.entityId);
 				continue;
 			}
 			body.lastAngle = body.angle;
+			body.offset[0] = body.offset[1];
 			if (!body.landed) {
 				// a stick falling over its foot: the further it leans, the faster it goes
 				body.speed += 0.035F * (float) Math.sin(body.angle + 0.2F);
@@ -219,9 +243,99 @@ public final class Corpses {
 					if (Math.abs(body.speed) < 0.03F) body.landed = true;
 				}
 			}
-			if (++body.age >= body.ticks) done.add(body.entityId);
+			++body.age;
+			// watched every tick the first seconds, then it sleeps and looks at the ground under it twice a second
+			if (!body.asleep || body.age % 10 == 0) move(level, entity, body);
+			Vec3 at = entity.position().add(body.offset[1]);
+			if (body.sinkLeft >= 0) {
+				if (--body.sinkLeft <= 0) done.add(body.entityId);
+			} else if (body.age % 20 == 0 && ru.deelter.chopchop.client.render.Unseen.unloaded(level, at)) {
+				done.add(body.entityId);
+			} else if (body.age >= body.ticks && ru.deelter.chopchop.client.render.Unseen.unseen(minecraft, at.add(0, 0.3, 0))) {
+				// gone while nobody looks; only someone who stares at it far too long sees it sink away
+				done.add(body.entityId);
+			} else if (body.age >= body.ticks * 3) {
+				body.sinkLeft = SINK_TICKS;
+			}
 		}
 		for (int id : done) release(id);
+	}
+
+	/**
+	 * A body on the ground stays on the ground: when what is under it is gone it falls, and when its middle hangs
+	 * over an edge (most of its weight out there) it slides off that way and falls.
+	 */
+	private static void move(ClientLevel level, Entity entity, Body body) {
+		Vec3 feet = entity.position().add(body.offset[1]);
+		float lying = (float) Math.sin(body.angle);
+		// the middle of the body, where most of the weight is: half its height along the fall
+		Vec3 middle = feet.add(body.dx * body.height * 0.5 * lying, 0, body.dz * body.height * 0.5 * lying);
+		boolean feetHeld = solidUnder(level, feet), middleHeld = solidUnder(level, middle);
+		Vec3 v = body.velocity;
+		boolean moving = v.lengthSqr() > 1e-5;
+		if (feetHeld && middleHeld && !moving) {
+			if (body.age > 60 && body.landed) body.asleep = true;
+			return;
+		}
+		body.asleep = false;
+		if (!middleHeld && feetHeld && body.landed) {
+			// tips over the edge, the way the weight hangs
+			v = v.add(body.dx * 0.03, 0, body.dz * 0.03);
+		}
+		if (!feetHeld || v.y > 0) v = v.add(0, -0.06, 0);
+		v = v.multiply(0.9, 0.98, 0.9);
+		Vec3 next = body.offset[1].add(v);
+		Vec3 nextFeet = entity.position().add(next);
+		if (v.y < 0 && solidUnder(level, nextFeet.add(0, 0.06, 0))) {
+			// lands on the top of the block under it
+			BlockPosHelper top = BlockPosHelper.top(level, nextFeet.add(0, 0.06, 0));
+			next = new Vec3(next.x, top.y - entity.getY(), next.z);
+			v = v.y < -0.25 ? new Vec3(v.x * 0.5, -v.y * 0.25, v.z * 0.5) : new Vec3(v.x * 0.6, 0, v.z * 0.6);
+		}
+		if (blocked(level, nextFeet.add(0, 0.2, 0))) v = new Vec3(0, Math.min(0, v.y), 0);
+		body.velocity = v.lengthSqr() < 1e-5 ? Vec3.ZERO : v;
+		body.offset[1] = v.lengthSqr() < 1e-5 ? body.offset[1] : next;
+	}
+
+	/**
+	 * A blast nearby throws bodies around it again, the closer the harder.
+	 */
+	public static void blast(Vec3 center) {
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null || level != bodiesLevel) return;
+		for (Body body : BODIES.values()) {
+			Entity entity = body.copy != null ? body.copy : level.getEntity(body.entityId);
+			if (entity == null) continue;
+			Vec3 at = entity.position().add(body.offset[1]);
+			Vec3 away = at.subtract(center);
+			double distance = away.length();
+			if (distance > 7) continue;
+			double power = 1 - distance / 7;
+			away = distance < 1e-3 ? new Vec3(0, 1, 0) : away.normalize();
+			body.velocity = new Vec3(away.x * (0.2 + power * 0.6), 0.25 + power * 0.45, away.z * (0.2 + power * 0.6));
+			body.asleep = false;
+			// it turns over in the air and comes down again
+			body.landed = false;
+			body.speed = (float) (0.1 + power * 0.3);
+		}
+	}
+
+	private static boolean solidUnder(ClientLevel level, Vec3 at) {
+		var pos = net.minecraft.core.BlockPos.containing(at.x, at.y - 0.05, at.z);
+		return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
+	}
+
+	private static boolean blocked(ClientLevel level, Vec3 at) {
+		var pos = net.minecraft.core.BlockPos.containing(at.x, at.y, at.z);
+		return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
+	}
+
+	private record BlockPosHelper(double y) {
+		static BlockPosHelper top(ClientLevel level, Vec3 at) {
+			var pos = net.minecraft.core.BlockPos.containing(at.x, at.y - 0.05, at.z);
+			var shape = level.getBlockState(pos).getCollisionShape(level, pos);
+			return new BlockPosHelper(pos.getY() + (shape.isEmpty() ? 0 : shape.max(net.minecraft.core.Direction.Axis.Y)));
+		}
 	}
 
 	/**

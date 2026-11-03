@@ -70,7 +70,7 @@ disarm:
   # the item drops to the ground; off, it is gone
   drops: false
 # dead mobs lie as bodies this long for players with the mod, then sink away. 0: vanilla death
-corpse-seconds: 20.0
+corpse-seconds: 18.0
 # dead players lie as bodies too (a copy with their skin, armour and wounds)
 player-corpses: true
 kill-cam:

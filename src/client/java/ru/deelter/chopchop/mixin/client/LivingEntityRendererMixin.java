@@ -43,6 +43,11 @@ public abstract class LivingEntityRendererMixin {
 		state.walkAnimationSpeed = 0;
 		// the body of a dead player wears no name
 		state.nameTag = null;
+		// where it slid or was thrown to by itself
+		var moved = body.offset(partialTicks);
+		state.x += moved.x;
+		state.y += moved.y;
+		state.z += moved.z;
 		// the fall in the frame the model is turned into: rotated by 180 - body yaw about y
 		double turn = Math.toRadians(180.0 - state.bodyRot);
 		float cos = (float) Math.cos(turn), sin = (float) Math.sin(turn);

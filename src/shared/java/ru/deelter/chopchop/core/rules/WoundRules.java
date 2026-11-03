@@ -167,7 +167,7 @@ public final class WoundRules {
 	 * Dead mobs stay on the ground as bodies for this long, falling the way the last blow pushed them, then sink
 	 * away. 0: they go the vanilla way
 	 */
-	private double corpseSeconds = 20.0;
+	private double corpseSeconds = 18.0;
 	/**
 	 * dead players lie as bodies too: the clients draw a copy with their skin, armour and wounds
 	 */

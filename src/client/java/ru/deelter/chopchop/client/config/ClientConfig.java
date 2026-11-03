@@ -32,7 +32,7 @@ public final class ClientConfig {
 	private boolean sounds = true;
 	private double soundVolume = 1.0;
 	private boolean debris = true;
-	private int debrisSeconds = 12;
+	private int debrisSeconds = 18;
 	/**
 	 * dead mobs lie on the ground as bodies, as long as the server says (needs the server to send them)
 	 */

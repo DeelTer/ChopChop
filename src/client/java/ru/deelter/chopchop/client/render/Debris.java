@@ -50,6 +50,11 @@ public final class Debris {
 	 * how close a player has to walk to a piece to kick it, blocks
 	 */
 	private static final double KICK_RANGE = 0.45;
+	/**
+	 * the first ticks a piece is looked after every tick; after that it sleeps until something happens
+	 */
+	private static final int ACTIVE_TICKS = 60;
+	private static final double BLAST_RANGE = 7;
 	private static final List<Chunk> CHUNKS = new ArrayList<>();
 
 	private Debris() {
@@ -68,6 +73,10 @@ public final class Debris {
 		 */
 		final net.minecraft.resources.Identifier texture;
 		int kickCooldown;
+		/**
+		 * ticks left of fading out, -1 while it is not
+		 */
+		int fadeLeft = -1;
 		final BodyPart part;
 		final VoxelMask mask;
 		final int cut;
@@ -236,13 +245,38 @@ public final class Debris {
 			Chunk c = it.next();
 			c.lastOffset.set(c.offset);
 			c.lastRotation.set(c.rotation);
-			if (++c.age > (c.head ? lifetime * 2 : lifetime) && !c.kept) {
-				it.remove();
-				continue;
-			}
 			// a head rests on its side, not on its center
 			float rest = c.head ? c.size / 2F : 0.06F;
 			Vec3 at = new Vec3(c.pivot.x + c.offset.x, c.pivot.y + c.offset.y, c.pivot.z + c.offset.z);
+			int life = c.head ? lifetime * 2 : lifetime;
+			++c.age;
+			if (!c.kept) {
+				// it goes where nobody sees it go: its chunk unloaded, or its time is up and nobody looks at it.
+				// Only someone who stares at it far too long sees it fade
+				if (c.fadeLeft >= 0) {
+					if (--c.fadeLeft <= 0) {
+						it.remove();
+						continue;
+					}
+				} else if (c.age % 20 == 0 && Unseen.unloaded(level, at)) {
+					it.remove();
+					continue;
+				} else if (c.age > life && Unseen.unseen(minecraft, at)) {
+					it.remove();
+					continue;
+				} else if (c.age > life * 3) {
+					c.fadeLeft = FADE_TICKS;
+				}
+			}
+			// asleep on the ground it only wakes when what it lies on is gone: watched closely the first seconds,
+			// then twice a second
+			if (c.resting && (c.age < ACTIVE_TICKS || c.age % 10 == 0)) {
+				BlockPos under = BlockPos.containing(at.x, at.y - rest - 0.05, at.z);
+				if (level.getBlockState(under).getCollisionShape(level, under).isEmpty()) {
+					c.resting = false;
+					c.velocity.set(0, 0, 0);
+				}
+			}
 			if (kick && !c.kept && --c.kickCooldown <= 0) kick(c, at, level);
 			if (!c.resting) {
 				c.velocity.y -= (float) GRAVITY;
@@ -273,6 +307,26 @@ public final class Debris {
 			if (c.head && (c.resting || c.bounces > 0 && c.velocity.lengthSquared() < 0.02F)) settle(c);
 			BlockPos pos = BlockPos.containing(at.x, at.y + 0.1, at.z);
 			c.light = LightCoordsUtil.pack(level.getBrightness(LightLayer.BLOCK, pos), level.getBrightness(LightLayer.SKY, pos));
+		}
+	}
+
+	/**
+	 * A blast nearby throws every piece around it again, the closer the harder.
+	 */
+	public static void blast(Vec3 center) {
+		for (Chunk c : CHUNKS) {
+			if (c.kept) continue;
+			Vector3f at = new Vector3f(c.pivot).add(c.offset);
+			Vector3f away = new Vector3f((float) (at.x - center.x), (float) (at.y - center.y), (float) (at.z - center.z));
+			float distance = away.length();
+			if (distance > BLAST_RANGE) continue;
+			float power = (float) (1 - distance / BLAST_RANGE);
+			if (distance < 1e-3F) away.set(0, 1, 0);
+			away.normalize().mul(0.25F + power * 0.6F);
+			c.velocity.set(away.x, Math.max(away.y, 0) + 0.2F + power * 0.35F, away.z);
+			c.spin = 0.4F + power * 0.6F;
+			c.resting = false;
+			c.age = Math.min(c.age, ACTIVE_TICKS / 2);
 		}
 	}
 
@@ -325,10 +379,10 @@ public final class Debris {
 		float partial = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		PoseStack stack = context.poseStack();
 		boolean bones = ClientConfig.get().isBones();
-		int lifetime = ClientConfig.get().getDebrisSeconds() * 20;
 		for (Chunk c : CHUNKS) {
-			float left = (c.head ? lifetime * 2 : lifetime) - c.age - partial;
-			// the end: fades out over two seconds; a piece without a known texture shrinks away instead
+			float left = c.fadeLeft < 0 ? FADE_TICKS : c.fadeLeft - partial;
+			// the end, if someone watched it all along: fades out over two seconds; a piece without a known texture
+			// shrinks away instead
 			float fade = c.kept ? 1F : Math.clamp(left / FADE_TICKS, 0F, 1F);
 			boolean translucent = fade < 1F && c.texture != null;
 			float shrink = c.kept || translucent ? 1F : Math.min(1F, left / 10F);
