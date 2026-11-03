@@ -436,8 +436,9 @@ public final class Debris {
 								VoxelMesher.skeletonStump(grid, c.cut, false, c.part.getSkeleton(), skeleton,
 										pose, Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));
 					}
-					if (meat && bones && !real) {
-						int row = c.cut == 0 ? grid.gy() : c.cut;
+					// a head has no bone of its own at the neck: the one bone stays in the stump on the body
+					if (meat && bones && !real && c.cut > 0) {
+						int row = c.cut;
 						collector.submitCustomGeometry(stack, translucent ? RenderTypes.entityTranslucent(GoreRender.BONE) : GoreRender.boneType(),
 								(pose, consumer) -> VoxelMesher.bone(grid, row, c.part.getBoneScale(), c.cut == 0, pose,
 										Sink.of(consumer, color, light, OverlayTexture.NO_OVERLAY)));

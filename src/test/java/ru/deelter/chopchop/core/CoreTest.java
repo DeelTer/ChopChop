@@ -651,7 +651,7 @@ class CoreTest {
 
 	@Test
 	void bonesSitInTheMiddleOfTheirParts() {
-		for (String id : new String[]{"player", "zombie", "humanoid"}) {
+		for (String id : new String[]{"player", "zombie", "humanoid", "horse"}) {
 			BodyProfile profile = PROFILES.byId(id);
 			for (int i = 0; i < profile.getParts().size(); i++) {
 				var part = profile.part(i);
@@ -686,4 +686,16 @@ class CoreTest {
 		}
 	}
 
+
+	@Test
+	void horsesHaveTheSkeletonHorseInside() {
+		BodyProfile horse = PROFILES.byId("horse");
+		assertEquals("minecraft:textures/entity/horse/horse_skeleton.png", horse.getSkeletonTexture());
+		assertArrayEquals(new int[]{64, 64}, horse.getSkeletonTextureSize());
+		assertNotNull(horse.part("body").getSkeleton());
+		assertNotNull(horse.part("right_front_leg").getSkeleton());
+		assertNull(horse.part("tail").getSkeleton(), "a tail is hair");
+		// the zombie and the player keep the skeleton's texture
+		assertEquals("minecraft:textures/entity/skeleton/skeleton.png", PROFILES.byId("zombie").getSkeletonTexture());
+	}
 }

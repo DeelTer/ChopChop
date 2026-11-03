@@ -120,6 +120,21 @@ public final class GoreRender {
 	}
 
 	/**
+	 * The spine under a head that came off: the middle 2 by 2 column of the bone of the part the head sat on (its
+	 * parent, or the body), in that part's frame, which a head shares at rest. Null with no skeleton inside.
+	 */
+	private static BodyPart.Skeleton spine(WoundState wounds, BodyPart head) {
+		if (skeletonTexture == null) return null;
+		BodyProfile profile = wounds.getProfile();
+		BodyPart under = head.getParent() != null ? profile.part(head.getParent()) : profile.part("body");
+		BodyPart.Skeleton bone = under == null ? null : under.getSkeleton();
+		if (bone == null || bone.box() == null || bone.box().length != 6) return null;
+		float[] b = bone.box();
+		float cx = (b[0] + b[3]) / 2, cz = (b[2] + b[5]) / 2;
+		return new BodyPart.Skeleton(new float[]{cx - 1, b[1], cz - 1, cx + 1, b[4], cz + 1}, bone.cube(), bone.uv(), 0);
+	}
+
+	/**
 	 * @return true when the cube was drawn here, false to draw it the usual way
 	 */
 	public static boolean compile(ModelPart.Cube cube, PoseStack.Pose pose, VertexConsumer builder, int lightCoords, int overlayCoords, int color) {
@@ -150,7 +165,12 @@ public final class GoreRender {
 			if (partState.getSeveredAt() == 0) {
 				// the whole part is off, a head: the stump is where it sat, a neck of meat with the bone standing out
 				VoxelMesher.neck(grid, grid.gy(), false, pose, inside);
-				if (bone) VoxelMesher.bone(grid, grid.gy(), part.getBoneScale(), false, pose, BONE_QUADS);
+				// one bone at a neck, on the body: the spine of the skeleton inside if there is one (the middle column
+				// of the bone the head sat on), else a cartoon one. The head that flew off has none of its own
+				var spine = spine(wounds, part);
+				boolean real = bone && spine != null
+						&& VoxelMesher.skeletonStump(grid, grid.gy(), false, spine, skeletonTexture, pose, SKELETON_QUADS);
+				if (bone && !real) VoxelMesher.bone(grid, grid.gy(), part.getBoneScale(), false, pose, BONE_QUADS);
 			} else if (partState.severed() && bone) {
 				// a body with a skeleton inside shows its own bone in the stump, the others a cartoon one
 				boolean real = skeletonTexture != null && part.getSkeleton() != null
