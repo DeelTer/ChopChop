@@ -238,6 +238,20 @@ public final class Corpses {
 	}
 
 	/**
+	 * A box around a body as it lies (or still stands, early in its fall), for something solid to meet it: from its
+	 * feet along the way it fell, as wide as it is.
+	 */
+	public static net.minecraft.world.phys.AABB box(int entityId) {
+		Body body = get(entityId);
+		Entity entity = entity(entityId);
+		if (body == null || entity == null) return null;
+		Vec3 feet = entity.position().add(body.offset[1]);
+		double along = body.height * Math.sin(body.angle);
+		Vec3 head = feet.add(body.dx * along, body.height * Math.cos(body.angle), body.dz * along);
+		return new net.minecraft.world.phys.AABB(feet, head).inflate(body.width / 2, 0.15, body.width / 2);
+	}
+
+	/**
 	 * Every body there is, for the crosshair.
 	 */
 	public static Collection<Body> all() {

@@ -120,6 +120,41 @@ public final class ModelPick {
 	}
 
 	/**
+	 * a dead body is under the crosshair right now, so a click at it is a cut
+	 */
+	public static boolean corpseAimed() {
+		Spot spot = corpse;
+		return spot != null && System.nanoTime() - spot.nanos() <= AIM_NANOS;
+	}
+
+	/**
+	 * A blade (of a VR hand, say) went into a dead body along {@code dir} from {@code from}: where it meets the body, on
+	 * the pose the body is drawn in, is cut as by a click there.
+	 *
+	 * @return the blade met the body and the cut went to the server (or the cut came too soon after the last)
+	 */
+	public static boolean cutCorpseAlong(int id, Vec3 from, Vec3 dir, double length) {
+		Minecraft minecraft = Minecraft.getInstance();
+		if (minecraft.player == null || !net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(ChopPayload.TYPE)) return false;
+		Corpses.Body body = Corpses.get(id);
+		if (body == null || !(Corpses.entity(id) instanceof LivingEntity entity)) return false;
+		BodyProfile profile = ChopChop.getProfiles().forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString());
+		AnimatedPose.Snapshot drawn = AnimatedPose.get(id);
+		if (profile == null || drawn == null || drawn.profile() != profile) return false;
+		WoundState wounds = ClientWounds.get(id);
+		WoundState state = wounds != null && wounds.getProfile() == profile ? wounds : WHOLE.computeIfAbsent(profile, WoundState::new);
+		Found found = castDrawn(entity, state, drawn, from, dir.normalize(), length);
+		if (found == null) return false;
+		long now = System.nanoTime();
+		if (now - lastCutNanos < CUT_NANOS) return true;
+		lastCutNanos = now;
+		Hit hit = found.hit();
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+				new ChopPayload(Protocol.cut(id, hit.part(), hit.x(), hit.y(), hit.z(), hit.inward(), hit.slash())));
+		return true;
+	}
+
+	/**
 	 * A click with a dead body under the crosshair: the blow goes to the server, which cuts the body for everyone.
 	 *
 	 * @return true when the click was spent on a body

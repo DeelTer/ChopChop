@@ -14,8 +14,7 @@ There are two front ends with the same calls:
 
 Both run the same shared code (`src/shared`), so a call gives the same result on either server.
 
-**Server side only, server thread only.** The client half of ChopChop just draws what the server sends; there is
-nothing to call on the client.
+**Server side only, server thread only**, but for dead bodies on the client (below).
 
 ## Setup
 
@@ -195,3 +194,18 @@ void onSwingLanded(LivingEntity attacker, LivingEntity target, SwingDirection di
   in that time works too (the server entity is gone after the vanilla 20 ticks of death, so do it before that).
 - The API classes are the only stable surface. Anything else in ChopChop (`ChopServer`, `WoundBook`, the
   protocol) may change between versions.
+
+## Dead bodies on the client
+
+Dead bodies live on the clients for `corpseSeconds`; a click at one cuts it (the server decides the cut). A mod with
+blades of its own (a VR combat mod) reaches them with `ru.deelter.chopchop.client.api.ChopChopClientApi`, client
+thread only:
+
+```java
+for (ChopChopClientApi.Corpse body : ChopChopClientApi.corpses(area)) {
+    body.id();   // the id the server knows it by
+    body.box();  // about where it lies, for a blade to meet it
+}
+ChopChopClientApi.cut(id, bladeFrom, bladeDir, bladeLength);   // cut where the blade meets the body
+ChopChopClientApi.corpseUnderCrosshair();                       // a click now is a cut: leave the click to ChopChop
+```
