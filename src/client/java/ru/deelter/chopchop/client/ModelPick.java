@@ -45,6 +45,12 @@ public final class ModelPick {
 	 */
 	private static final Map<BodyProfile, WoundState> WHOLE = new IdentityHashMap<>();
 	private static Spot last;
+	/**
+	 * a dead body under the crosshair, nearer than any block: a click cuts it instead of hitting what is behind
+	 */
+	private static Spot corpse;
+	private static long lastCutNanos;
+	private static final long CUT_NANOS = 400_000_000L;
 
 	private record Spot(int entityId, Hit hit, long nanos) {
 	}
@@ -57,6 +63,7 @@ public final class ModelPick {
 
 	public static void afterPick(Minecraft minecraft, float partial) {
 		last = null;
+		corpse = null;
 		if (!ChopChopClient.serverSpeaks() || minecraft.player == null || minecraft.level == null) return;
 		Entity viewer = minecraft.getCameraEntity();
 		if (viewer == null || viewer != minecraft.player || minecraft.player.isSpectator()) return;
@@ -82,9 +89,55 @@ public final class ModelPick {
 			if (found != null) {
 				minecraft.hitResult = new EntityHitResult(found.entity(), found.point());
 				minecraft.crosshairPickEntity = found.entity();
+			} else {
+				pickCorpse(minecraft, eye, look, limit);
 			}
 		}
 		if (found != null) last = new Spot(found.entity().getId(), found.hit(), System.nanoTime());
+	}
+
+	/**
+	 * Dead bodies within reach, on the pose they were drawn in (they lie, the rest pose would be of no use). One under
+	 * the crosshair takes it: no block behind it is hit or broken.
+	 */
+	private static void pickCorpse(Minecraft minecraft, Vec3 eye, Vec3 look, double limit) {
+		if (Corpses.size() == 0) return;
+		Found best = null;
+		for (Corpses.Body body : Corpses.all()) {
+			if (!(Corpses.entity(body.id()) instanceof LivingEntity entity) || entity.distanceToSqr(eye) > (limit + 3) * (limit + 3)) continue;
+			BodyProfile profile = ChopChop.getProfiles().forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString());
+			AnimatedPose.Snapshot drawn = AnimatedPose.get(body.id());
+			if (profile == null || drawn == null || drawn.profile() != profile) continue;
+			WoundState wounds = ClientWounds.get(body.id());
+			WoundState state = wounds != null && wounds.getProfile() == profile ? wounds : WHOLE.computeIfAbsent(profile, WoundState::new);
+			Found f = castDrawn(entity, state, drawn, eye, look, best == null ? limit : best.hit().depth());
+			if (f != null) best = f;
+		}
+		if (best == null) return;
+		corpse = new Spot(best.entity().getId(), best.hit(), System.nanoTime());
+		minecraft.hitResult = net.minecraft.world.phys.BlockHitResult.miss(best.point(), net.minecraft.core.Direction.UP,
+				net.minecraft.core.BlockPos.containing(best.point()));
+	}
+
+	/**
+	 * A click with a dead body under the crosshair: the blow goes to the server, which cuts the body for everyone.
+	 *
+	 * @return true when the click was spent on a body
+	 */
+	public static boolean cutCorpse(Minecraft minecraft) {
+		Spot spot = corpse;
+		if (spot == null || minecraft.player == null || System.nanoTime() - spot.nanos() > AIM_NANOS) return false;
+		if (!net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(ChopPayload.TYPE)) return false;
+		// the swing is seen at once; blows faster than a sword swings are not sent
+		minecraft.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+		long now = System.nanoTime();
+		if (now - lastCutNanos < CUT_NANOS) return true;
+		lastCutNanos = now;
+		minecraft.player.resetAttackStrengthTicker();
+		Hit hit = spot.hit();
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+				new ChopPayload(Protocol.cut(spot.entityId(), hit.part(), hit.x(), hit.y(), hit.z(), hit.inward(), hit.slash())));
+		return true;
 	}
 
 	/**

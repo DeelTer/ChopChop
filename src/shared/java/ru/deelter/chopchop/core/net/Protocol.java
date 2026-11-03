@@ -32,6 +32,11 @@ public final class Protocol {
 	 */
 	public static final byte C_AIM = 2;
 	public static final int AIM_LENGTH = 1 + 4 + 1 + 3 + 12 + 12;
+	/**
+	 * to the server: a blow at a dead body on the ground, which has no entity on the server any more. The same
+	 * payload as {@link #C_AIM}, the entity being the id the body got in {@link #S_CORPSE}
+	 */
+	public static final byte C_CUT = 3;
 
 	/**
 	 * to the client: the server speaks the protocol. Payload: version
@@ -51,7 +56,9 @@ public final class Protocol {
 	public static final byte S_CLEAR = 4;
 	/**
 	 * an entity died and stays as a body: how it falls, the same for every client. Payload: entity, direction of
-	 * the fall in the world (x, z), its strength, a seed for the rest, ticks it lies there
+	 * the fall in the world (x, z), its strength, a seed for the rest, ticks it lies there, and the id the body goes
+	 * by from now on (its wounds, blows at it): the entity's own for a mob, one of its own for a player, who comes
+	 * back under the same entity id
 	 */
 	public static final byte S_CORPSE = 5;
 
@@ -135,6 +142,10 @@ public final class Protocol {
 	 * @param ticks    how long it lies before it is gone
 	 */
 	public static byte[] corpse(int entityId, float dx, float dz, float strength, int seed, int ticks) {
+		return corpse(entityId, dx, dz, strength, seed, ticks, entityId);
+	}
+
+	public static byte[] corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId) {
 		return write(out -> {
 			out.writeByte(S_CORPSE);
 			out.writeInt(entityId);
@@ -143,6 +154,7 @@ public final class Protocol {
 			out.writeFloat(strength);
 			out.writeInt(seed);
 			out.writeInt(ticks);
+			out.writeInt(corpseId);
 		});
 	}
 
@@ -190,15 +202,25 @@ public final class Protocol {
 				int entity = in.readInt();
 				float dx = in.readFloat(), dz = in.readFloat(), strength = in.readFloat();
 				if (!Float.isFinite(dx) || !Float.isFinite(dz) || !Float.isFinite(strength)) throw new IOException("bad corpse");
-				yield new Message.Corpse(entity, dx, dz, Math.clamp(strength, 0, 2), in.readInt(), Math.clamp(in.readInt(), 0, 20 * 600));
+				int seed = in.readInt(), ticks = Math.clamp(in.readInt(), 0, 20 * 600);
+				int corpseId = in.available() >= 4 ? in.readInt() : entity;
+				yield new Message.Corpse(entity, dx, dz, Math.clamp(strength, 0, 2), seed, ticks, corpseId);
 			}
 			default -> throw new IOException("unknown message " + type);
 		};
 	}
 
 	public static byte[] aim(int entityId, int part, int x, int y, int z, float[] inward, float[] slash) {
+		return spot(C_AIM, entityId, part, x, y, z, inward, slash);
+	}
+
+	public static byte[] cut(int corpseId, int part, int x, int y, int z, float[] inward, float[] slash) {
+		return spot(C_CUT, corpseId, part, x, y, z, inward, slash);
+	}
+
+	private static byte[] spot(byte type, int entityId, int part, int x, int y, int z, float[] inward, float[] slash) {
 		return write(out -> {
-			out.writeByte(C_AIM);
+			out.writeByte(type);
 			out.writeInt(entityId);
 			out.writeByte(part);
 			out.writeByte(x);
@@ -222,7 +244,18 @@ public final class Protocol {
 	 * @return the aim of a client, or null if the message is not one or is broken
 	 */
 	public static Aim readAim(byte[] data) {
-		if (data == null || data.length != AIM_LENGTH || data[0] != C_AIM) return null;
+		return readSpot(data, C_AIM);
+	}
+
+	/**
+	 * @return a blow at a dead body, or null if the message is not one or is broken
+	 */
+	public static Aim readCut(byte[] data) {
+		return readSpot(data, C_CUT);
+	}
+
+	private static Aim readSpot(byte[] data, byte type) {
+		if (data == null || data.length != AIM_LENGTH || data[0] != type) return null;
 		try {
 			DataInputStream in = new DataInputStream(new ByteArrayInputStream(data, 1, data.length - 1));
 			int entity = in.readInt();
@@ -284,7 +317,7 @@ public final class Protocol {
 		record Clear(int entityId) implements Message {
 		}
 
-		record Corpse(int entityId, float dx, float dz, float strength, int seed, int ticks) implements Message {
+		record Corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId) implements Message {
 		}
 	}
 }

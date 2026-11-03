@@ -45,9 +45,9 @@ public final class AnimatedPose {
 	}
 
 	public static void capture(Model<?> model, int entityId, double distanceSq, PoseStack.Pose pose, double[] camera) {
-		if (distanceSq > RANGE * RANGE || entityId < 0) return;
-		var level = Minecraft.getInstance().level;
-		if (level == null || !(level.getEntity(entityId) instanceof LivingEntity entity)) return;
+		if (distanceSq > RANGE * RANGE) return;
+		// a dead player's body too: it is in no world, but it can be cut
+		if (!(ru.deelter.chopchop.client.ClientEntities.find(entityId) instanceof LivingEntity entity)) return;
 		BodyProfile profile = ChopChop.getProfiles().forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString());
 		if (profile == null) return;
 		Bindings.ensure(model);

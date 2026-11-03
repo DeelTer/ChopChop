@@ -61,6 +61,47 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	private record PendingAim(Protocol.Aim aim, long tick) {
 	}
 
+	/**
+	 * A dead body as the plugin keeps it for blows at it: its own copy of the wounds, where it fell, until when.
+	 */
+	private record Corpse(org.bukkit.World world, Vector at, WoundState state, long until) {
+	}
+
+	private final Map<Integer, Corpse> corpses = new HashMap<>();
+	private final Map<UUID, Long> lastCut = new HashMap<>();
+	private int nextCorpseId = -1_000_000;
+	private static final int CUT_COOLDOWN = 8;
+	private static final double CORPSE_SLACK = 3;
+
+	/**
+	 * A blow at a dead body a client says it struck: checked for being near, for the cooldown and for the spot being
+	 * on the body, then cut like any body with the weapon in hand. Only for the eye.
+	 */
+	private void cutCorpse(Player player, Protocol.Aim cut) {
+		Corpse corpse = corpses.get(cut.entityId());
+		long now = player.getWorld().getFullTime();
+		if (corpse == null || corpse.world() != player.getWorld() || corpse.until() < now) return;
+		Long last = lastCut.get(player.getUniqueId());
+		if (last != null && now - last < CUT_COOLDOWN) return;
+		AttributeInstance range = player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE);
+		double reach = (range == null ? 3.0 : range.getValue()) + CORPSE_SLACK;
+		if (player.getEyeLocation().toVector().distanceSquared(corpse.at()) > reach * reach) return;
+		Hit hit = ru.deelter.chopchop.core.hit.AimCheck.corpse(corpse.state(), cut);
+		if (hit == null) return;
+		lastCut.put(player.getUniqueId(), now);
+		player.swingMainHand();
+		AttributeInstance attack = player.getAttribute(Attribute.ATTACK_DAMAGE);
+		float damage = attack == null ? 1 : (float) attack.getValue();
+		WeaponKind weapon = classify(player.getInventory().getItemInMainHand());
+		for (byte[] message : book.hitCorpse(cut.entityId(), corpse.state(), hit, weapon, damage, rules)) {
+			for (Player near : corpse.world().getPlayers()) {
+				if (modded.contains(near.getUniqueId()) && near.getLocation().toVector().distanceSquared(corpse.at()) < RESEND_RANGE * RESEND_RANGE) {
+					send(near, message);
+				}
+			}
+		}
+	}
+
 	private Protocol.Aim takeAim(Player player, Entity target) {
 		PendingAim pending = aims.remove(player.getUniqueId());
 		if (pending == null || pending.aim().entityId() != target.getEntityId()) return null;
@@ -144,6 +185,11 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 
 	@Override
 	public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] message) {
+		if (Protocol.CHANNEL.equals(channel) && message.length > 0 && message[0] == Protocol.C_CUT) {
+			Protocol.Aim cut = Protocol.readCut(message);
+			if (cut != null && modded.contains(player.getUniqueId())) cutCorpse(player, cut);
+			return;
+		}
 		if (Protocol.CHANNEL.equals(channel) && message.length > 0 && message[0] == Protocol.C_AIM) {
 			Protocol.Aim aim = Protocol.readAim(message);
 			if (aim != null && modded.contains(player.getUniqueId())) aims.put(player.getUniqueId(), new PendingAim(aim, player.getWorld().getFullTime()));
@@ -267,10 +313,18 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		if (push.lengthSquared() < 1e-6) push = new Vector(0, 0, 1);
 		push.normalize();
 		double damage = target.getLastDamageCause() == null ? 4 : target.getLastDamageCause().getFinalDamage();
-		float strength = (float) Math.min(1.5, 0.25 + damage / 20.0);
+		float strength = (float) Math.min(1.5, 0.25 + Math.min(40, damage) / 20.0);
+		int ticks = (int) Math.round(rules.getCorpseSeconds() * 20);
+		// a mob's body keeps its entity id on the clients; a player comes back under its id, its body gets one of its own
+		int corpseId = target instanceof Player ? nextCorpseId-- : target.getEntityId();
+		BodyProfile profile = profiles.forEntity(target.getType().getKey().toString());
+		// the killing blow is applied a tick later (flush): the body takes its wounds then
+		getServer().getScheduler().runTaskLater(this, () -> corpses.put(corpseId, new Corpse(target.getWorld(), target.getLocation().toVector(),
+				book.copyOf(book.get(target.getUniqueId()), profile), target.getWorld().getFullTime() + ticks * 3L)), 2);
 		byte[] message = Protocol.corpse(target.getEntityId(), (float) push.getX(), (float) push.getZ(), strength,
-				java.util.concurrent.ThreadLocalRandom.current().nextInt(), (int) Math.round(rules.getCorpseSeconds() * 20));
+				java.util.concurrent.ThreadLocalRandom.current().nextInt(), ticks, corpseId);
 		broadcast(target, message);
+		if (corpses.size() > 256) corpses.values().removeIf(c -> c.until() < c.world().getFullTime());
 	}
 
 	/**
@@ -464,6 +518,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	public void onQuit(PlayerQuitEvent event) {
 		modded.remove(event.getPlayer().getUniqueId());
 		aims.remove(event.getPlayer().getUniqueId());
+		lastCut.remove(event.getPlayer().getUniqueId());
 		if (rules.isPersistPlayers()) store(event.getPlayer());
 	}
 

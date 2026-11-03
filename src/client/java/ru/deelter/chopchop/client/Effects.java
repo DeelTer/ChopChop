@@ -43,13 +43,16 @@ public final class Effects {
 		Minecraft minecraft = Minecraft.getInstance();
 		ClientLevel level = minecraft.level;
 		if (level == null) return;
-		Entity entity = level.getEntity(event.entityId());
+		Entity entity = ClientEntities.find(event.entityId());
 		if (!(entity instanceof LivingEntity living)) return;
 		ClientConfig config = ClientConfig.get();
 
 		// the first event of an entity comes before its state: then the built-in profile of its type says what it is
 		WoundState state = ClientWounds.get(event.entityId());
 		Vector3d at = HitLocator.toWorld(pose(living, state), event.model()[0], event.model()[1], event.model()[2]);
+		// a body on the ground does not stand as the rest pose: the blood comes from about its middle
+		Vec3 lying = Corpses.middle(event.entityId());
+		if (lying != null) at = new Vector3d(lying.x, lying.y, lying.z);
 		BodyProfile profile = state != null ? state.getProfile()
 				: ChopChop.getProfiles().forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(living.getType()).toString());
 		String material = Material.MEAT;
@@ -95,7 +98,9 @@ public final class Effects {
 	 */
 	static Vec3 worldPoint(Protocol.Message.Event event) {
 		ClientLevel level = Minecraft.getInstance().level;
-		if (level == null || !(level.getEntity(event.entityId()) instanceof LivingEntity living)) return null;
+		if (level == null || !(ClientEntities.find(event.entityId()) instanceof LivingEntity living)) return null;
+		Vec3 lying = Corpses.middle(event.entityId());
+		if (lying != null) return lying;
 		Vector3d at = HitLocator.toWorld(pose(living, ClientWounds.get(event.entityId())), event.model()[0], event.model()[1], event.model()[2]);
 		return new Vec3(at.x, at.y, at.z);
 	}

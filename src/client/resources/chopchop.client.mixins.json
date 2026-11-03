@@ -8,6 +8,7 @@
 		"AvatarRendererMixin",
 		"CameraMixin",
 		"ClientLevelMixin",
+		"CorpseAttackMixin",
 		"CubeMixin",
 		"EntityRenderDispatcherMixin",
 		"EntityRenderStateMixin",

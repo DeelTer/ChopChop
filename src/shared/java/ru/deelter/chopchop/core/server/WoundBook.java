@@ -108,6 +108,35 @@ public final class WoundBook {
 	}
 
 	/**
+	 * A blow at a dead body, kept apart from the living ones (a dead player respawns under the same id). Every blow
+	 * counts as a killing one: what is dead comes apart easily.
+	 *
+	 * @param corpseId the id the body goes by on the clients
+	 */
+	public List<byte[]> hitCorpse(int corpseId, WoundState state, Hit hit, WeaponKind weapon, float damage, WoundRules rules) {
+		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, damage, true, rules, random);
+		List<byte[]> messages = new ArrayList<>(2);
+		if (!outcome.changed()) {
+			messages.add(Protocol.event(corpseId, Protocol.EVENT_SPLASH, hit.part(), hit.model(), -1, -1));
+			return messages;
+		}
+		byte kind = outcome.severedAt() >= 0 ? Protocol.EVENT_SEVER : Protocol.EVENT_WOUND;
+		// no attacker: a head off a body that is dead already is no kill, no kill cam
+		messages.add(Protocol.event(corpseId, kind, hit.part(), hit.model(), outcome.severedAt(), -1));
+		messages.add(Protocol.state(corpseId, state));
+		return messages;
+	}
+
+	/**
+	 * A copy of a body, for a dead one that must not change with the living entity of the same id.
+	 */
+	public WoundState copyOf(WoundState state, BodyProfile profile) {
+		if (state == null || state.pristine()) return new WoundState(profile);
+		WoundState copy = decode(encode(state));
+		return copy != null ? copy : new WoundState(profile);
+	}
+
+	/**
 	 * Cuts a part off at a row, whatever the rules say: for the API.
 	 *
 	 * @param at       point of the cut in model space, pixels, for the effects; null: the middle of the cut

@@ -141,6 +141,10 @@ public final class Corpses {
 		public float width() {
 			return width;
 		}
+
+		public int id() {
+			return entityId;
+		}
 	}
 
 	public static void add(Protocol.Message.Corpse message) {
@@ -153,9 +157,10 @@ public final class Corpses {
 		if (!(entity instanceof LivingEntity living)) return;
 		if (BODIES.size() >= MAX) release(BODIES.keySet().iterator().next());
 		if (living instanceof Player player) {
-			Player copy = copy(level, player);
+			// the id the server gave the body, for blows at it; an old server gives none
+			int id = message.corpseId() != message.entityId() ? message.corpseId() : nextCopyId--;
+			Player copy = copy(level, player, id);
 			if (copy == null) return;
-			int id = copy.getId();
 			HIDDEN.put(player.getId(), id);
 			WoundState wounds = ClientWounds.get(player.getId());
 			if (wounds != null) {
@@ -187,10 +192,10 @@ public final class Corpses {
 	/**
 	 * A player that is not in the world, standing where the dead one stands, dressed as it was.
 	 */
-	private static Player copy(ClientLevel level, Player player) {
+	private static Player copy(ClientLevel level, Player player, int id) {
 		try {
 			RemotePlayer copy = new RemotePlayer(level, player.getGameProfile());
-			copy.setId(nextCopyId--);
+			copy.setId(id);
 			// the hat and sleeve layers, the main arm and the like
 			var values = player.getEntityData().getNonDefaultValues();
 			if (values != null) copy.getEntityData().assignValues(values);
@@ -208,6 +213,35 @@ public final class Corpses {
 			ChopChop.LOG.warn("Can't make the body of {}", player.getName().getString(), e);
 			return null;
 		}
+	}
+
+	/**
+	 * The entity of a body: the mob kept in the world, or the copy of a player that is in no world.
+	 */
+	public static Entity entity(int entityId) {
+		Body body = get(entityId);
+		if (body == null) return null;
+		if (body.copy != null) return body.copy;
+		ClientLevel level = Minecraft.getInstance().level;
+		return level == null ? null : level.getEntity(entityId);
+	}
+
+	/**
+	 * About the middle of a body as it lies, for the blood of a blow at it.
+	 */
+	public static Vec3 middle(int entityId) {
+		Body body = get(entityId);
+		Entity entity = entity(entityId);
+		if (body == null || entity == null) return null;
+		double along = body.height * 0.45 * Math.sin(body.angle);
+		return entity.position().add(body.offset[1]).add(body.dx * along, 0.2 + body.height * 0.45 * Math.cos(body.angle), body.dz * along);
+	}
+
+	/**
+	 * Every body there is, for the crosshair.
+	 */
+	public static Collection<Body> all() {
+		return BODIES.values();
 	}
 
 	public static Body get(int entityId) {

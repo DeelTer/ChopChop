@@ -77,6 +77,64 @@ public final class ChopServer {
 	}
 
 	/**
+	 * A dead body as the server keeps it for blows at it: its own copy of the wounds, where it fell, until when.
+	 */
+	record Corpse(ServerLevel level, Vec3 at, WoundState state, long until) {
+	}
+
+	/**
+	 * dead bodies by the id they go by on the clients
+	 */
+	private static final Map<Integer, Corpse> CORPSES = new HashMap<>();
+	/**
+	 * ids for the bodies of players, far from any entity id
+	 */
+	private static int nextCorpseId = -1_000_000;
+	private static final Map<UUID, Long> LAST_CUT = new HashMap<>();
+	/**
+	 * ticks between two blows at a body, about a sword's cooldown
+	 */
+	private static final int CUT_COOLDOWN = 8;
+	/**
+	 * how far a body may have slid or been thrown from where it fell, blocks
+	 */
+	private static final double CORPSE_SLACK = 3;
+
+	/**
+	 * A blow at a dead body a client says it struck. Only for the eye: checked for being near, for the cooldown and
+	 * for the spot being on the body, then cut like any body with the weapon in hand.
+	 */
+	private static void cutCorpse(ServerPlayer player, Protocol.Aim cut) {
+		Corpse corpse = CORPSES.get(cut.entityId());
+		WoundRules rules = rules();
+		if (corpse == null || rules == null || corpse.level() != player.level() || corpse.until() < player.level().getGameTime()) return;
+		long now = player.level().getGameTime();
+		Long last = LAST_CUT.get(player.getUUID());
+		if (last != null && now - last < CUT_COOLDOWN) return;
+		double reach = player.entityInteractionRange() + CORPSE_SLACK;
+		if (player.getEyePosition().distanceToSqr(corpse.at()) > reach * reach) return;
+		Hit hit = ru.deelter.chopchop.core.hit.AimCheck.corpse(corpse.state(), cut);
+		if (hit == null) return;
+		LAST_CUT.put(player.getUUID(), now);
+		player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+		float damage = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+		var weapon = FabricHits.classify(player.getMainHandItem());
+		for (byte[] message : book.hitCorpse(cut.entityId(), corpse.state(), hit, weapon, damage, rules)) {
+			for (ServerPlayer near : corpse.level().players()) {
+				if (MODDED.contains(near.getUUID()) && near.distanceToSqr(corpse.at()) < RESEND_RANGE * RESEND_RANGE) send(near, message);
+			}
+		}
+	}
+
+	/**
+	 * Forgets bodies whose time on every client is up.
+	 */
+	private static void tickCorpses(MinecraftServer server) {
+		if (CORPSES.isEmpty() || server.getTickCount() % 20 != 0) return;
+		CORPSES.values().removeIf(c -> c.until() < c.level().getGameTime());
+	}
+
+	/**
 	 * The aim a player sent for this attack on this target, taken once; null if none or stale.
 	 */
 	static Protocol.Aim takeAim(ServerPlayer player, Entity target) {
@@ -98,6 +156,8 @@ public final class ChopServer {
 			MODDED.clear();
 			PLAYERS.clear();
 			AIMS.clear();
+			CORPSES.clear();
+			LAST_CUT.clear();
 			Consequences.reset();
 			if (config.getRules().isPersistPlayers()) loadPlayers(server);
 		});
@@ -112,6 +172,11 @@ public final class ChopServer {
 
 		ServerPlayNetworking.registerGlobalReceiver(ChopPayload.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
+			Protocol.Aim cut = Protocol.readCut(payload.data());
+			if (cut != null) {
+				if (MODDED.contains(player.getUUID())) cutCorpse(player, cut);
+				return;
+			}
 			Protocol.Aim aim = Protocol.readAim(payload.data());
 			if (aim != null) {
 				if (MODDED.contains(player.getUUID())) AIMS.put(player.getUUID(), new PendingAim(aim, player.level().getGameTime()));
@@ -126,6 +191,7 @@ public final class ChopServer {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			MODDED.remove(handler.getPlayer().getUUID());
 			AIMS.remove(handler.getPlayer().getUUID());
+			LAST_CUT.remove(handler.getPlayer().getUUID());
 		});
 
 		EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
@@ -149,6 +215,7 @@ public final class ChopServer {
 		});
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> resendSelf(player));
 		ServerTickEvents.END_SERVER_TICK.register(Consequences::tick);
+		ServerTickEvents.END_SERVER_TICK.register(ChopServer::tickCorpses);
 		// players crawl in the vanilla pose, their profile has no crawl of its own
 		Crawling.server = player -> {
 			WoundState state = book == null ? null : book.get(player.getUUID());
@@ -260,9 +327,17 @@ public final class ChopServer {
 		if (push.horizontalDistanceSqr() < 1e-6) push = target.getDeltaMovement();
 		if (push.horizontalDistanceSqr() < 1e-6) push = Vec3.directionFromRotation(0, target.yBodyRot + 180);
 		push = new Vec3(push.x, 0, push.z).normalize();
-		float strength = (float) Math.min(1.5, 0.25 + damage / 20.0);
-		byte[] message = Protocol.corpse(target.getId(), (float) push.x, (float) push.z, strength, RANDOM.nextInt(),
-				(int) Math.round(rules.getCorpseSeconds() * 20));
+		float strength = (float) Math.min(1.5, Math.min(MAX_BLOW, damage) / 20.0 + 0.25);
+		int ticks = (int) Math.round(rules.getCorpseSeconds() * 20);
+		// a mob's body keeps its entity id on the clients; a player comes back under its id, its body gets one of its own
+		int corpseId = target instanceof Player ? nextCorpseId-- : target.getId();
+		BodyProfile profile = profiles.forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString());
+		if (target.level() instanceof ServerLevel level) {
+			// clients keep a body three times its time at most, while someone looks at it
+			CORPSES.put(corpseId, new Corpse(level, target.position(), book.copyOf(book.get(target.getUUID()), profile),
+					level.getGameTime() + ticks * 3L));
+		}
+		byte[] message = Protocol.corpse(target.getId(), (float) push.x, (float) push.z, strength, RANDOM.nextInt(), ticks, corpseId);
 		broadcast(target, message);
 	}
 

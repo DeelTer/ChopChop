@@ -547,4 +547,32 @@ class CoreTest {
 		assertNull(Protocol.readAim(new byte[]{Protocol.C_AIM, 1, 2}));
 		assertEquals(-1, Protocol.readServerbound(Protocol.aim(7, arm, 1, 8, 1, null, null)));
 	}
+
+	@Test
+	void corpsesCanBeCut() throws Exception {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(5));
+		WoundState living = new WoundState(profile);
+		living.part(profile.part("left_arm").getIndex()).sever(7);
+		WoundState body = book.copyOf(living, profile);
+		assertNotSame(living, body);
+		assertEquals(7, body.part(profile.part("left_arm").getIndex()).getSeveredAt());
+		WoundRules rules = new WoundRules();
+		rules.setLethalSeverChance(0.95);
+		int leg = profile.part("right_leg").getIndex();
+		var cut = Protocol.readCut(Protocol.cut(-5, leg, 1, 8, 1, null, null));
+		assertNotNull(cut);
+		assertEquals(-5, cut.entityId());
+		assertNull(Protocol.readAim(Protocol.cut(-5, leg, 1, 8, 1, null, null)), "a cut is no aim");
+		Hit hit = AimCheck.corpse(body, cut);
+		assertNotNull(hit);
+		boolean off = false;
+		for (int i = 0; i < 20 && !off; i++) off = body.part(leg).severed() || book.hitCorpse(-5, body, hit, WeaponKind.AXE, 7, rules).size() == 2
+				&& body.part(leg).severed();
+		assertTrue(body.part(leg).severed(), "blows at a body take its limbs");
+		assertFalse(living.part(leg).severed(), "the living state is not touched");
+		assertNull(AimCheck.corpse(body, Protocol.readCut(Protocol.cut(-5, leg, 1, 10, 1, null, null))), "a cut off spot is gone");
+		var message = (Protocol.Message.Corpse) Protocol.readClientbound(Protocol.corpse(3, 1, 0, 0.5F, 1, 100, -9), PROFILES);
+		assertEquals(-9, message.corpseId());
+	}
 }

@@ -33,6 +33,24 @@ public final class AimCheck {
 	}
 
 	/**
+	 * A blow at a dead body: the server no longer has the body's entity nor knows how it lies (each client lets it
+	 * fall), so only the part and voxel are checked. Cutting a body is only for the eye, nothing in the game hangs
+	 * on it; how near the player is, the server checks itself.
+	 *
+	 * @return the hit, or null if the spot is not on the body any more
+	 */
+	public static Hit corpse(WoundState state, Protocol.Aim cut) {
+		if (cut == null || cut.part() < 0 || cut.part() >= state.partCount()) return null;
+		BodyPart part = state.getProfile().part(cut.part());
+		if (!part.isWoundable() && !part.severable()) return null;
+		PartState partState = state.part(cut.part());
+		if (!partState.inside(cut.x(), cut.y(), cut.z()) || partState.gone(cut.x(), cut.y(), cut.z())) return null;
+		Vector3d model = HitLocator.voxelCenter(state.getProfile(), part, cut.x(), cut.y(), cut.z());
+		return new Hit(cut.part(), cut.x(), cut.y(), cut.z(), new float[]{(float) model.x, (float) model.y, (float) model.z}, 0,
+				cut.slash(), cut.inward());
+	}
+
+	/**
 	 * @param look unit length
 	 * @return the hit to use, or null to find it the usual way
 	 */
