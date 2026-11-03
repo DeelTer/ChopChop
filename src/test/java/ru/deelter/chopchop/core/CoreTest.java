@@ -529,7 +529,12 @@ class CoreTest {
 		Hit hit = AimCheck.accept(state, SOUTH, aim, ex, ey, ez, look.x, look.y, look.z, 3);
 		assertNotNull(hit);
 		assertEquals(arm, hit.part());
-		assertArrayEquals(new float[]{0, 0, 1}, hit.inward());
+		// the way in agrees with the look; a claim pointing the other way (to open the far side) is replaced
+		float[] way = ru.deelter.chopchop.core.api.BodyOps.gridDirection(state, SOUTH, arm, look.x, look.y, look.z);
+		assertTrue(hit.inward()[0] * way[0] + hit.inward()[1] * way[1] + hit.inward()[2] * way[2] > 0.99);
+		var backwards = Protocol.readAim(Protocol.aim(7, arm, 1, 8, 1, new float[]{-way[0], -way[1], -way[2]}, null));
+		Hit replaced = AimCheck.accept(state, SOUTH, backwards, ex, ey, ez, look.x, look.y, look.z, 3);
+		assertTrue(replaced.inward()[0] * way[0] + replaced.inward()[1] * way[1] + replaced.inward()[2] * way[2] > 0.99);
 		// looking far away from it: refused
 		assertNull(AimCheck.accept(state, SOUTH, aim, ex, ey, ez, 1, 0, 0, 3));
 		// out of reach: refused

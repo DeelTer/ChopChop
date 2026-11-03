@@ -336,6 +336,7 @@ public final class Debris {
 	 */
 	private static void kick(Chunk c, Vec3 at, ClientLevel level) {
 		for (var player : level.players()) {
+			if (player.isSpectator()) continue;
 			double dx = at.x - player.getX(), dz = at.z - player.getZ();
 			double dy = at.y - player.getY();
 			if (dy < -0.4 || dy > 1.0 || dx * dx + dz * dz > KICK_RANGE * KICK_RANGE) continue;

@@ -50,7 +50,12 @@ public final class AimCheck {
 		if (along < -0.5 || along > reach + REACH_MARGIN) return null;
 		double ox = dx - lx * along, oy = dy - ly * along, oz = dz - lz * along;
 		if (Math.sqrt(ox * ox + oy * oy + oz * oz) > MAX_OFF_LOOK * Math.max(0.5, pose.scale())) return null;
+		// the way in decides which side a wound may dig from: it has to agree with the look, or a client could open
+		// the far side of a part
+		float[] inward = ru.deelter.chopchop.core.api.BodyOps.gridDirection(state, pose, aim.part(), lx, ly, lz);
+		float[] claimed = aim.inward();
+		if (claimed != null && inward != null && claimed[0] * inward[0] + claimed[1] * inward[1] + claimed[2] * inward[2] > 0.3) inward = claimed;
 		return new Hit(aim.part(), aim.x(), aim.y(), aim.z(), new float[]{(float) model.x, (float) model.y, (float) model.z},
-				Math.max(0, along), aim.slash(), aim.inward());
+				Math.max(0, along), aim.slash(), inward);
 	}
 }

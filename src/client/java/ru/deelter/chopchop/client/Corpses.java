@@ -150,7 +150,11 @@ public final class Corpses {
 			int id = copy.getId();
 			HIDDEN.put(player.getId(), id);
 			WoundState wounds = ClientWounds.get(player.getId());
-			if (wounds != null) ClientWounds.put(id, wounds);
+			if (wounds != null) {
+				ClientWounds.put(id, wounds);
+				// seen: kept even while nobody has drawn the copy yet, it has no entity in the world to wait for
+				ClientWounds.get(id);
+			}
 			Body body = new Body(message, id, copy, player.getId());
 			body.height = player.getBbHeight();
 			BODIES.put(id, body);
@@ -343,12 +347,17 @@ public final class Corpses {
 	 * newest wounds: on Paper they come a tick after the death, a head blown off by the same blast included.
 	 */
 	private static void follow(ClientLevel level, Body body) {
-		Entity real = level.getEntity(body.sourceId);
 		body.copy.setOldPosAndRot();
+		// only the newest body of a player follows it: it may have died again since
+		if (!Objects.equals(HIDDEN.get(body.sourceId), body.entityId)) return;
+		Entity real = level.getEntity(body.sourceId);
 		if (!(real instanceof LivingEntity living) || !living.isDeadOrDying()) return;
 		body.copy.setPos(real.getX(), real.getY(), real.getZ());
 		WoundState wounds = ClientWounds.get(body.sourceId);
-		if (wounds != null) ClientWounds.put(body.entityId, wounds);
+		if (wounds != null) {
+			ClientWounds.put(body.entityId, wounds);
+			ClientWounds.get(body.entityId);
+		}
 	}
 
 	/**
@@ -363,7 +372,7 @@ public final class Corpses {
 		float partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		PoseStack stack = context.poseStack();
 		for (Body body : BODIES.values()) {
-			if (body.copy == null) continue;
+			if (body.copy == null || body.copy.distanceToSqr(camera) > 128 * 128) continue;
 			try {
 				var state = dispatcher.extractEntity(body.copy, partial);
 				dispatcher.submit(state, context.levelState().cameraRenderState, state.x - camera.x, state.y - camera.y, state.z - camera.z,
@@ -382,7 +391,7 @@ public final class Corpses {
 		Body body = BODIES.remove(entityId);
 		if (body == null) return;
 		if (body.copy != null) {
-			HIDDEN.remove(body.sourceId);
+			HIDDEN.remove(body.sourceId, entityId);
 			ClientWounds.clear(entityId);
 			return;
 		}

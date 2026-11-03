@@ -27,6 +27,10 @@ final class PaperConsequences {
 	private final JavaPlugin plugin;
 	private final NamespacedKey crawlKey;
 	private final Set<UUID> headless = new HashSet<>();
+	/**
+	 * set while a headless body is killed by the plugin itself
+	 */
+	boolean finishing;
 	private final Set<Mob> frozen = new HashSet<>();
 	/**
 	 * mobs lying without legs, their AI off until they are whole again or leave the world
@@ -97,7 +101,13 @@ final class PaperConsequences {
 					headless.remove(entity.getUniqueId());
 					cancel();
 					entity.setNoDamageTicks(0);
-					entity.damage(1.0E9, attacker != null && attacker.isValid() ? attacker : null);
+					// the plugin's own finishing blow: no new wounds from it
+					finishing = true;
+					try {
+						entity.damage(1.0E9, attacker != null && attacker.isValid() ? attacker : null);
+					} finally {
+						finishing = false;
+					}
 					if (!entity.isDead()) entity.setHealth(0);
 				}
 			}.runTaskTimer(plugin, 1, 1);

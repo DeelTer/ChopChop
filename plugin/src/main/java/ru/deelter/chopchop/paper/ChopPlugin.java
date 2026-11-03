@@ -184,7 +184,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		if (target instanceof Player ? !rules.isPlayers() : !rules.isMobs()) return;
 		BodyProfile profile = profiles.forEntity(target.getType().getKey().toString());
 		if (profile == null) return;
-		if (!automaticAllows(target, event)) return;
+		if (consequences.finishing || !automaticAllows(target, event)) return;
 		WoundState state = book.getOrBlank(target.getUniqueId(), profile);
 		EntityDamageEvent.DamageCause cause = event.getCause();
 		if (rules.isExplosions() && (cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION || cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION)) {
@@ -230,7 +230,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			List<byte[]> messages = p.blast != null
 					? book.blast(target.getUniqueId(), target.getEntityId(), state, p.blast, lost, blastHead(target, state, p.from), rules)
 					: book.hit(target.getUniqueId(), target.getEntityId(), state, p.hit, p.weapon,
-					target.isDead() ? (float) Math.max(lost, p.dealt) : lost, target.isDead(), rules, attacker);
+					target.isDead() ? (float) Math.max(lost, Math.min(40, p.dealt)) : lost, target.isDead(), rules, attacker);
 			for (byte[] message : messages) broadcast(target, message);
 			if (!wasHeadless && state.headless() && attacker >= 0 && p.blast == null && "freeze".equalsIgnoreCase(rules.getKillCamThreats())) {
 				consequences.freeze(threats, rules);

@@ -39,6 +39,10 @@ final class Consequences {
 
 	private static final Map<UUID, Headless> HEADLESS = new HashMap<>();
 	/**
+	 * set while a headless body is killed by the mod itself
+	 */
+	static boolean finishing;
+	/**
 	 * mobs held still while a kill cam plays: ticks left and whether they had no AI before
 	 */
 	private static final Map<Mob, int[]> FROZEN = new HashMap<>();
@@ -126,7 +130,13 @@ final class Consequences {
 			if (entity.level() instanceof ServerLevel level) {
 				// the source of the chop, so the kill and its message go to whoever did it. More than any hit
 				// before it, so invulnerability frames do not swallow it
-				if (!entity.hurtServer(level, h.source, Float.MAX_VALUE) && entity.isAlive()) entity.kill(level);
+				// the mod's own finishing blow: no new wounds from it, it is not a blow anyone struck
+				finishing = true;
+				try {
+					if (!entity.hurtServer(level, h.source, Float.MAX_VALUE) && entity.isAlive()) entity.kill(level);
+				} finally {
+					finishing = false;
+				}
 			}
 		}
 	}

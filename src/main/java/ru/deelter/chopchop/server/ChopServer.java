@@ -51,6 +51,10 @@ import java.util.*;
 public final class ChopServer {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final double RESEND_RANGE = 160;
+	/**
+	 * the most damage of one blow that counts towards severing
+	 */
+	private static final float MAX_BLOW = 40;
 
 	private static ServerConfig config;
 	private static WoundBook book;
@@ -202,7 +206,9 @@ public final class ChopServer {
 	 */
 	public static void onDamaged(LivingEntity target, DamageSource source, float lost, float dealt) {
 		if (book == null || config == null) return;
-		if (ChopApiHooks.skipsAutomatic(target, source)) return;
+		if (Consequences.finishing || ChopApiHooks.skipsAutomatic(target, source)) return;
+		// a kill command or the like deals any amount: judge a blow by what a blow can be
+		dealt = Math.min(dealt, MAX_BLOW);
 		WoundRules rules = config.getRules();
 		if (!rules.isEnabled() || lost <= 0) return;
 		boolean player = target instanceof Player;
