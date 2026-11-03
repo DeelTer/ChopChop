@@ -621,8 +621,9 @@ public final class Corpses {
 				dispatcher.submit(state, context.levelState().cameraRenderState, state.x - camera.x, state.y - camera.y, state.z - camera.z,
 						stack, context.submitNodeCollector());
 			} catch (RuntimeException e) {
-				ChopChop.LOG.warn("Can't draw a dead player, it is left out", e);
-				body.age = body.ticks;
+				// once: it goes on the next tick, not a warning every frame
+				if (body.sinkLeft < 0) ChopChop.LOG.warn("Can't draw a dead player, it is left out", e);
+				body.sinkLeft = 1;
 			}
 		}
 	}

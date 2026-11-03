@@ -82,7 +82,8 @@ public final class ModelPick {
 			found = null;
 			AABB around = viewer.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.5);
 			for (LivingEntity entity : minecraft.level.getEntitiesOfClass(LivingEntity.class, around,
-					e -> e != viewer && e.isPickable() && !e.isSpectator() && !e.isInvisible())) {
+					// never the horse one rides, nor whoever rides along: vanilla leaves them out too
+					e -> e != viewer && e.isPickable() && !e.isSpectator() && !e.isInvisible() && e.getRootVehicle() != viewer.getRootVehicle())) {
 				Found f = cast(entity, eye, look, found == null ? limit : found.hit().depth(), partial);
 				if (f != null) found = f;
 			}
