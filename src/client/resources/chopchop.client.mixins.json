@@ -12,6 +12,7 @@
 		"ItemInHandLayerMixin",
 		"KeyboardInputMixin",
 		"FirstPersonItemsMixin",
+		"GameRendererPickMixin",
 		"GuiMixin",
 		"HeadlessHeadLayerMixin",
 		"LivingEntityEventMixin",
