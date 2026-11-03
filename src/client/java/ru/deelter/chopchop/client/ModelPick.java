@@ -72,6 +72,14 @@ public final class ModelPick {
 		Vec3 eye = viewer.getEyePosition(partial);
 		Vec3 look = viewer.getViewVector(partial);
 		Found found;
+		// vanilla may pick a body on the ground (if the hook that keeps it out did not take): a body is cut, not hit
+		boolean onBody = current instanceof EntityHitResult picked && Corpses.get(picked.getEntity().getId()) != null;
+		if (onBody) {
+			minecraft.hitResult = net.minecraft.world.phys.BlockHitResult.miss(current.getLocation(), net.minecraft.core.Direction.UP,
+					net.minecraft.core.BlockPos.containing(current.getLocation()));
+			minecraft.crosshairPickEntity = null;
+			current = minecraft.hitResult;
+		}
 		if (current instanceof EntityHitResult entityHit) {
 			// vanilla found it by its box: only where on the body
 			if (!(entityHit.getEntity() instanceof LivingEntity living)) return;
@@ -83,7 +91,8 @@ public final class ModelPick {
 			AABB around = viewer.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.5);
 			for (LivingEntity entity : minecraft.level.getEntitiesOfClass(LivingEntity.class, around,
 					// never the horse one rides, nor whoever rides along: vanilla leaves them out too
-					e -> e != viewer && e.isPickable() && !e.isSpectator() && !e.isInvisible() && e.getRootVehicle() != viewer.getRootVehicle())) {
+					e -> e != viewer && e.isPickable() && !e.isSpectator() && !e.isInvisible() && e.getRootVehicle() != viewer.getRootVehicle()
+							&& Corpses.get(e.getId()) == null)) {
 				Found f = cast(entity, eye, look, found == null ? limit : found.hit().depth(), partial);
 				if (f != null) found = f;
 			}
@@ -91,18 +100,23 @@ public final class ModelPick {
 				minecraft.hitResult = new EntityHitResult(found.entity(), found.point());
 				minecraft.crosshairPickEntity = found.entity();
 			} else {
-				pickCorpse(minecraft, eye, look, limit);
+				Found body = findCorpse(eye, look, limit);
+				if (body != null) {
+					corpse = new Spot(body.entity().getId(), body.hit(), System.nanoTime());
+					// no block behind it is hit or broken
+					minecraft.hitResult = net.minecraft.world.phys.BlockHitResult.miss(body.point(), net.minecraft.core.Direction.UP,
+							net.minecraft.core.BlockPos.containing(body.point()));
+				}
 			}
 		}
 		if (found != null) last = new Spot(found.entity().getId(), found.hit(), System.nanoTime());
 	}
 
 	/**
-	 * Dead bodies within reach, on the pose they were drawn in (they lie, the rest pose would be of no use). One under
-	 * the crosshair takes it: no block behind it is hit or broken.
+	 * The nearest dead body along a ray, on the pose it was drawn in (it lies, the rest pose would be of no use).
 	 */
-	private static void pickCorpse(Minecraft minecraft, Vec3 eye, Vec3 look, double limit) {
-		if (Corpses.size() == 0) return;
+	private static Found findCorpse(Vec3 eye, Vec3 look, double limit) {
+		if (Corpses.size() == 0) return null;
 		Found best = null;
 		for (Corpses.Body body : Corpses.all()) {
 			if (!(Corpses.entity(body.id()) instanceof LivingEntity entity) || entity.distanceToSqr(eye) > (limit + 3) * (limit + 3)) continue;
@@ -114,10 +128,7 @@ public final class ModelPick {
 			Found f = castDrawn(entity, state, drawn, eye, look, best == null ? limit : best.hit().depth());
 			if (f != null) best = f;
 		}
-		if (best == null) return;
-		corpse = new Spot(best.entity().getId(), best.hit(), System.nanoTime());
-		minecraft.hitResult = net.minecraft.world.phys.BlockHitResult.miss(best.point(), net.minecraft.core.Direction.UP,
-				net.minecraft.core.BlockPos.containing(best.point()));
+		return best;
 	}
 
 	/**
@@ -162,7 +173,18 @@ public final class ModelPick {
 	 */
 	public static boolean cutCorpse(Minecraft minecraft) {
 		Spot spot = corpse;
-		if (spot == null || minecraft.player == null || System.nanoTime() - spot.nanos() > AIM_NANOS) return false;
+		if (minecraft.player == null) return false;
+		if (spot == null || System.nanoTime() - spot.nanos() > AIM_NANOS) {
+			// found now if the pick of the frame did not (another mod's pick, or its hook did not take)
+			if (!ChopChopClient.serverSpeaks()) return false;
+			Vec3 eye = minecraft.player.getEyePosition(1F), look = minecraft.player.getViewVector(1F);
+			HitResult current = minecraft.hitResult;
+			double reach = minecraft.player.entityInteractionRange();
+			double limit = current != null && current.getType() == HitResult.Type.BLOCK ? Math.min(reach, current.getLocation().distanceTo(eye)) : reach;
+			Found body = findCorpse(eye, look, limit);
+			if (body == null) return false;
+			spot = new Spot(body.entity().getId(), body.hit(), System.nanoTime());
+		}
 		if (!net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(ChopPayload.TYPE)) return false;
 		// the swing is seen at once; blows faster than a sword swings are not sent
 		minecraft.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);

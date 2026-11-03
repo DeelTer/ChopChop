@@ -94,7 +94,7 @@ public final class ChopServer {
 	/**
 	 * ticks between two blows at a body, about a sword's cooldown
 	 */
-	private static final int CUT_COOLDOWN = 8;
+	private static final int CUT_COOLDOWN = 6;
 	/**
 	 * how far a body may have slid or been thrown from where it fell, blocks
 	 */

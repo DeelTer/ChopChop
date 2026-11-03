@@ -10,6 +10,7 @@
 		"ClientLevelMixin",
 		"CorpseAttackMixin",
 		"CubeMixin",
+		"EntityPickMixin",
 		"EntityRenderDispatcherMixin",
 		"EntityRenderStateMixin",
 		"ItemInHandLayerMixin",

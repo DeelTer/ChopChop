@@ -662,4 +662,20 @@ class CoreTest {
 			}
 		}
 	}
+
+	@Test
+	void everyBlowAtABodyShows() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(2));
+		WoundRules rules = new WoundRules();
+		int chest = profile.part("body").getIndex();
+		for (WeaponKind weapon : new WeaponKind[]{WeaponKind.BLUNT, WeaponKind.SWORD, WeaponKind.AXE}) {
+			for (int i = 0; i < 20; i++) {
+				WoundState body = new WoundState(profile);
+				var messages = book.hitCorpse(-1, body, new Hit(chest, 3, 5, 0, new float[3], 0, null, new float[]{0, 0, 1}), weapon, 1, rules);
+				assertEquals(2, messages.size(), weapon + " left no wound");
+				assertTrue(body.part(chest).carvedCount() > 0);
+			}
+		}
+	}
 }

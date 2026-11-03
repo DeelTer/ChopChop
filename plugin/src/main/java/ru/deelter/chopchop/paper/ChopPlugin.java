@@ -70,7 +70,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	private final Map<Integer, Corpse> corpses = new HashMap<>();
 	private final Map<UUID, Long> lastCut = new HashMap<>();
 	private int nextCorpseId = -1_000_000;
-	private static final int CUT_COOLDOWN = 8;
+	private static final int CUT_COOLDOWN = 6;
 	private static final double CORPSE_SLACK = 3;
 
 	/**

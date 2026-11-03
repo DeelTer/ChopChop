@@ -132,6 +132,8 @@ public final class ChopChopClient implements ClientModInitializer {
 					else if (event.severedAt() == 0 && player != null && event.attacker() == player.getId()) KillCam.expect(event.entityId());
 				}
 				Effects.play(event);
+				// a body on the ground twitches under a blow
+				Corpses.struck(event.entityId(), event.kind());
 			}
 		}
 	}

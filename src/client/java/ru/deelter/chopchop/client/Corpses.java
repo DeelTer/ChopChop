@@ -499,6 +499,23 @@ public final class Corpses {
 	}
 
 	/**
+	 * A blow landed on a body (the server says so, every client alike): it twitches, the harder the more it cut, and
+	 * gives a little hop.
+	 */
+	public static void struck(int entityId, byte kind) {
+		Body body = get(entityId);
+		if (body == null) return;
+		float power = switch (kind) {
+			case Protocol.EVENT_SEVER, Protocol.EVENT_BLAST -> 0.55F;
+			case Protocol.EVENT_WOUND -> 0.35F;
+			default -> 0.2F;
+		};
+		jolt(body, power);
+		body.velocity = body.velocity.add(0, 0.04 + power * 0.08, 0);
+		body.asleep = false;
+	}
+
+	/**
 	 * A knock: every joint gets a push of its own, up to {@code power} radians a tick.
 	 */
 	private static void jolt(Body body, float power) {
