@@ -664,18 +664,26 @@ class CoreTest {
 	}
 
 	@Test
-	void everyBlowAtABodyShows() {
+	void blowsAtABodyWoundItByTheUsualChance() {
 		BodyProfile profile = PROFILES.byId("zombie");
 		WoundBook book = new WoundBook(PROFILES, new Random(2));
 		WoundRules rules = new WoundRules();
 		int chest = profile.part("body").getIndex();
 		for (WeaponKind weapon : new WeaponKind[]{WeaponKind.BLUNT, WeaponKind.SWORD, WeaponKind.AXE}) {
-			for (int i = 0; i < 20; i++) {
+			int wounded = 0;
+			for (int i = 0; i < 200; i++) {
 				WoundState body = new WoundState(profile);
-				var messages = book.hitCorpse(-1, body, new Hit(chest, 3, 5, 0, new float[3], 0, null, new float[]{0, 0, 1}), weapon, 1, rules);
-				assertEquals(2, messages.size(), weapon + " left no wound");
-				assertTrue(body.part(chest).carvedCount() > 0);
+				var messages = book.hitCorpse(-1, body, new Hit(chest, 3, 5, 0, new float[3], 0, null, new float[]{0, 0, 1}), weapon, 5, rules);
+				// a blow always says something to the clients: a splash at least, or a wound and the new state
+				assertFalse(messages.isEmpty());
+				if (messages.size() == 2) {
+					wounded++;
+					assertTrue(body.part(chest).carvedCount() > 0);
+				}
 			}
+			double expected = rules.getWoundChance() * rules.weapon(weapon).woundChance();
+			assertEquals(expected, wounded / 200.0, 0.12, weapon + " wounds a body about as often as a living one");
 		}
 	}
+
 }
