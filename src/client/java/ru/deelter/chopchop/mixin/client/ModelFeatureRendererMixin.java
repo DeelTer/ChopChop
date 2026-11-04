@@ -66,6 +66,6 @@ public abstract class ModelFeatureRendererMixin {
 
 	@Inject(method = "prepareModel", at = @At("TAIL"))
 	private void chopchop$drawn(ModelFeatureRenderer.Submit<?> submit, CallbackInfo ci) {
-		GoreRender.end(((RenderTypeFeatureRendererInvoker) this)::chopchop$getVertexBuilder);
+		GoreRender.end(((RenderTypeFeatureRendererInvoker) this)::chopchop$getVertexBuilder, submit.renderType().hasBlending());
 	}
 }

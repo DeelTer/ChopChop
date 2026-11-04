@@ -117,12 +117,21 @@ public final class GoreRender {
 	 * Ends the draw and writes the meat and bones it collected.
 	 */
 	public static void end(Function<RenderType, VertexConsumer> buffers) {
+		end(buffers, false);
+	}
+
+	/**
+	 * @param blended the model was drawn with a blended (translucent) type: its buffers go to the transparency
+	 *                (OIT) pass under Fabulous graphics, which has no pipelines for cutout types, so the gore is
+	 *                written translucent too
+	 */
+	public static void end(Function<RenderType, VertexConsumer> buffers, boolean blended) {
 		if (state != null) {
 			try {
-				MEAT_QUADS.flush(buffers, meatType(), -1, light, overlay);
-				BONE_QUADS.flush(buffers, boneType(), -1, light, overlay);
-				SLIME_QUADS.flush(buffers, slimeType(), -1, light, overlay);
-				if (skeletonTexture != null) SKELETON_QUADS.flush(buffers, skeletonTexture.type(), -1, light, overlay);
+				MEAT_QUADS.flush(buffers, blended ? RenderTypes.entityTranslucent(MEAT) : meatType(), -1, light, overlay);
+				BONE_QUADS.flush(buffers, blended ? RenderTypes.entityTranslucent(BONE) : boneType(), -1, light, overlay);
+				SLIME_QUADS.flush(buffers, blended ? RenderTypes.entityTranslucent(SLIME) : slimeType(), -1, light, overlay);
+				if (skeletonTexture != null) SKELETON_QUADS.flush(buffers, blended ? skeletonTexture.translucentType() : skeletonTexture.type(), -1, light, overlay);
 			} finally {
 				reset();
 			}
