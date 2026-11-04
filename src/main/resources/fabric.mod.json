@@ -27,6 +27,10 @@
 		{
 			"config": "chopchop.client.mixins.json",
 			"environment": "client"
+		},
+		{
+			"config": "chopchop.cpm.mixins.json",
+			"environment": "client"
 		}
 	],
 	"depends": {
@@ -37,6 +41,7 @@
 	"suggests": {
 		"cloth-config": "*",
 		"modmenu": "*",
-		"modelinteractions": "*"
+		"modelinteractions": "*",
+		"cpm": "*"
 	}
 }

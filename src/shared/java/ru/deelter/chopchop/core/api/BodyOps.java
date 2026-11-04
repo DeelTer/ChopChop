@@ -23,6 +23,52 @@ public final class BodyOps {
 	}
 
 	/**
+	 * The wounds of a body as plain Java values only (maps, strings, numbers, booleans), for a mod or a plugin that
+	 * reads them through reflection without depending on ChopChop:
+	 * <pre>
+	 * profile    String   the body profile, "player"
+	 * revision   Integer  counted up on every change
+	 * headless   Boolean  the head came off
+	 * legless    Boolean  every leg is cut off
+	 * legsGone   Integer  legs cut off, at any height
+	 * parts      Map&lt;String, Map&lt;String, Object&gt;&gt;  the damaged parts by name ("right_arm"), each:
+	 *   carved     Integer  voxels carved out by wounds
+	 *   voxels     Integer  voxels of the whole part
+	 *   wounded    Double   carved / voxels, 0 to 1
+	 *   severed    Boolean  cut off at some height
+	 *   remaining  Double   share of the part still on, 0 (all gone) to 1 (whole length)
+	 *   hand       String   "right" or "left" for an arm with a hand, absent otherwise
+	 *   leg        Boolean  the body stands on it
+	 * </pre>
+	 * The maps are copies: changing them changes nothing.
+	 */
+	public static java.util.Map<String, Object> snapshot(WoundState state) {
+		java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+		body.put("profile", state.getProfile().getId());
+		body.put("revision", state.getRevision());
+		body.put("headless", state.headless());
+		body.put("legless", state.legless());
+		body.put("legsGone", state.legsGone());
+		java.util.Map<String, Object> parts = new java.util.LinkedHashMap<>();
+		for (int i = 0; i < state.partCount(); i++) {
+			var part = state.part(i);
+			if (part.pristine()) continue;
+			BodyPart def = part.getPart();
+			java.util.Map<String, Object> p = new java.util.LinkedHashMap<>();
+			p.put("carved", part.carvedCount());
+			p.put("voxels", def.volume());
+			p.put("wounded", (double) part.carvedCount() / def.volume());
+			p.put("severed", part.severed());
+			p.put("remaining", part.severed() ? (double) part.getSeveredAt() / def.gy() : 1.0);
+			if (def.getHand() != null) p.put("hand", def.getHand());
+			p.put("leg", def.isLeg());
+			parts.put(def.getName(), p);
+		}
+		body.put("parts", parts);
+		return body;
+	}
+
+	/**
 	 * A spot on a body found by a ray.
 	 *
 	 * @param part     name of the part, "right_arm"

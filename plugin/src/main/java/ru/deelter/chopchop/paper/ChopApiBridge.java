@@ -57,9 +57,19 @@ public final class ChopApiBridge {
 		return partState.severed() ? (double) partState.getSeveredAt() / def.gy() : 1;
 	}
 
+	public static byte[] stateMessage(LivingEntity entity) {
+		WoundState state = plugin().book().get(entity.getUniqueId());
+		return state == null ? null : ru.deelter.chopchop.core.net.Protocol.state(entity.getEntityId(), state);
+	}
+
 	public static boolean headless(LivingEntity entity) {
 		WoundState state = plugin().book().get(entity.getUniqueId());
 		return state != null && state.headless();
+	}
+
+	public static java.util.Map<String, Object> woundsOf(java.util.UUID entity) {
+		WoundState state = plugin().book().get(entity);
+		return state == null ? null : ru.deelter.chopchop.core.api.BodyOps.snapshot(state);
 	}
 
 	public static boolean legless(LivingEntity entity) {

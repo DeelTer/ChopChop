@@ -68,6 +68,8 @@ public abstract class ModelFeatureRendererMixin {
 
 	@Inject(method = "prepareModel", at = @At("TAIL"))
 	private void chopchop$drawn(ModelFeatureRenderer.Submit<?> submit, CallbackInfo ci) {
+		// a model of Customizable Player Models draws no stumps of its own
+		GoreRender.stumps(submit.model(), submit.pose(), submit.lightCoords(), submit.overlayCoords());
 		GoreRender.end(((RenderTypeFeatureRendererInvoker) this)::chopchop$getVertexBuilder, submit.renderType().hasBlending());
 	}
 }

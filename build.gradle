@@ -100,6 +100,12 @@ dependencies {
     }
     // optional, to open the settings screen from the mod list
     clientCompileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
+    // optional, wounds on Customizable Player Models. -Pcpm runs the game with it
+    if (project.hasProperty("cpm")) {
+        clientImplementation "maven.modrinth:custom-player-models:${project.cpm_version}"
+    } else {
+        clientCompileOnly "maven.modrinth:custom-player-models:${project.cpm_version}"
+    }
 }
 
 test {

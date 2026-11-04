@@ -96,6 +96,31 @@ public final class ChopChopApi {
 		return state != null && state.headless();
 	}
 
+	/**
+	 * The wounds of an entity by its UUID, as plain Java values only, for a mod that calls this through reflection
+	 * without depending on ChopChop. The keys are listed in {@code API.md}; null when the entity is whole or the
+	 * server knows nothing of it.
+	 */
+	public static @Nullable Map<String, Object> woundsOf(java.util.UUID entity) {
+		WoundState state = ChopServer.wounds(entity);
+		return state == null ? null : ru.deelter.chopchop.core.api.BodyOps.snapshot(state);
+	}
+
+	/**
+	 * The wounds of every player online that has any, by UUID, plain Java values as in {@link #woundsOf}. Players
+	 * that are whole are left out. An empty map with no server running.
+	 */
+	public static Map<java.util.UUID, Map<String, Object>> playerWounds() {
+		Map<java.util.UUID, Map<String, Object>> all = new java.util.LinkedHashMap<>();
+		var server = ChopServer.server();
+		if (server == null) return all;
+		for (var player : server.getPlayerList().getPlayers()) {
+			Map<String, Object> wounds = woundsOf(player.getUUID());
+			if (wounds != null) all.put(player.getUUID(), wounds);
+		}
+		return all;
+	}
+
 	public static boolean isLegless(LivingEntity entity) {
 		WoundState state = ChopServer.wounds(entity);
 		return state != null && state.legless();

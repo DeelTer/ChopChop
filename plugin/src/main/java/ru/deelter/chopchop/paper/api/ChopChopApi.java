@@ -65,8 +65,39 @@ public final class ChopChopApi {
 		return remaining(entity, part) < 1;
 	}
 
+	/**
+	 * The wounds of an entity as the server would send them to a client with the mod ({@code chopchop:sync}, a full
+	 * state message for its entity id), null when it is whole. For plugins that record or relay what clients see,
+	 * e.g. a replay that has to start from the wounds an entity already had.
+	 */
+	public static byte @Nullable [] stateMessage(LivingEntity entity) {
+		return ChopApiBridge.stateMessage(entity);
+	}
+
 	public static boolean isHeadless(LivingEntity entity) {
 		return ChopApiBridge.headless(entity);
+	}
+
+	/**
+	 * The wounds of an entity by its UUID, as plain Java values only, for a plugin that calls this through reflection
+	 * without depending on ChopChop. The keys are listed in {@code API.md}; null when the entity is whole or the
+	 * server knows nothing of it.
+	 */
+	public static java.util.@Nullable Map<String, Object> woundsOf(java.util.UUID entity) {
+		return ChopApiBridge.woundsOf(entity);
+	}
+
+	/**
+	 * The wounds of every player online that has any, by UUID, plain Java values as in {@link #woundsOf}. Players
+	 * that are whole are left out.
+	 */
+	public static java.util.Map<java.util.UUID, java.util.Map<String, Object>> playerWounds() {
+		java.util.Map<java.util.UUID, java.util.Map<String, Object>> all = new java.util.LinkedHashMap<>();
+		for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+			java.util.Map<String, Object> wounds = woundsOf(player.getUniqueId());
+			if (wounds != null) all.put(player.getUniqueId(), wounds);
+		}
+		return all;
 	}
 
 	public static boolean isLegless(LivingEntity entity) {

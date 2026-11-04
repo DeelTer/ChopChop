@@ -59,6 +59,15 @@ public final class GoreRender {
 	 * the skeleton inside, drawn with its own texture
 	 */
 	private static final Sink.Buffer SKELETON_QUADS = new Sink.Buffer();
+	/**
+	 * parts whose inside this draw already holds, so a model of Customizable Player Models gets the stumps it does not
+	 * draw itself
+	 */
+	private static final java.util.BitSet GORED = new java.util.BitSet();
+	/**
+	 * the model being drawn is one of Customizable Player Models, see {@link #ownModel}
+	 */
+	private static boolean ownModel;
 	private static SkeletonTexture skeletonTexture;
 
 	private GoreRender() {
@@ -105,8 +114,55 @@ public final class GoreRender {
 		MEAT_QUADS.clear();
 		BONE_QUADS.clear();
 		SLIME_QUADS.clear();
+		GORED.clear();
+		ownModel = false;
 		SKELETON_QUADS.clear();
 		skeletonTexture = wounds == null || !ClientConfig.get().isSkeletonInside() ? null : SkeletonTexture.of(wounds.getProfile());
+	}
+
+	/**
+	 * The wounds of the model being drawn as the body (not its armour or layers), null when none.
+	 */
+	/**
+	 * The model being drawn is not made of the cubes of the game but of its own (Customizable Player Models): the
+	 * stumps it does not draw are added after it, see {@link #stumps}.
+	 */
+	public static void ownModel() {
+		ownModel = true;
+	}
+
+	public static WoundState drawing() {
+		return role == Role.MAIN ? state : null;
+	}
+
+	/**
+	 * After a model of Customizable Player Models was drawn (its own cubes, not the ones of the game, where the
+	 * stumps come from): the meat and bone of every part that is cut off and got none, in the frame of the part as
+	 * the model was posed.
+	 *
+	 * @param pose the pose the model was drawn with
+	 */
+	public static void stumps(net.minecraft.client.model.Model<?> model, PoseStack.Pose pose, int lightCoords, int overlayCoords) {
+		WoundState wounds = state;
+		if (wounds == null || !gore || !ownModel) return;
+		light = lightCoords;
+		overlay = overlayCoords;
+		for (int i = 0; i < wounds.partCount(); i++) {
+			PartState partState = wounds.part(i);
+			if (!partState.severed() || GORED.get(i)) continue;
+			BodyPart part = partState.getPart();
+			var path = Bindings.path(model, part.getName());
+			if (path == null || path.isEmpty()) continue;
+			PoseStack stack = new PoseStack();
+			stack.last().set(pose);
+			for (ModelPart p : path) p.translateAndRotate(stack);
+			float[] b = part.getBox();
+			VoxelMesher.Grid grid = new VoxelMesher.Grid(b[0], b[1], b[2], (b[3] - b[0]) / part.gx(), (b[4] - b[1]) / part.gy(),
+					(b[5] - b[2]) / part.gz(), part.gx(), part.gy(), part.gz());
+			GORED.set(i);
+			// the inside of the cut only: the wounds of the skin of a model of its own are not known
+			inside(wounds, part, partState, grid, (x, y, z) -> y >= partState.getSeveredAt(), stack.last());
+		}
 	}
 
 	public static boolean active() {
@@ -188,6 +244,17 @@ public final class GoreRender {
 		if (gore && !isOverlay && binding.first()) {
 			light = lightCoords;
 			overlay = overlayCoords;
+			GORED.set(part.getIndex());
+			inside(wounds, part, partState, grid, mask, pose);
+		}
+		return true;
+	}
+
+	/**
+	 * The inside of a part: meat (or bone, or goo) wherever it is open, and at a stump its bone.
+	 */
+	private static void inside(WoundState wounds, BodyPart part, PartState partState, VoxelMesher.Grid grid, VoxelMask mask, PoseStack.Pose pose) {
+		{
 			String material = part.getMaterial();
 			Sink inside = Material.goo(material) ? SLIME_QUADS : Material.bleeds(material) ? MEAT_QUADS : BONE_QUADS;
 			VoxelMesher.inside(grid, mask, material, pose, inside, part.getSkeleton(), skeletonTexture, SKELETON_QUADS);
@@ -209,6 +276,5 @@ public final class GoreRender {
 				if (!real) VoxelMesher.bone(grid, partState.getSeveredAt(), part.getBoneScale(), true, pose, BONE_QUADS);
 			}
 		}
-		return true;
 	}
 }

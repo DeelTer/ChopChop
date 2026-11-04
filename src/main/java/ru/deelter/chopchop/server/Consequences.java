@@ -12,6 +12,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.Vec3;
 import ru.deelter.chopchop.ChopChop;
 import ru.deelter.chopchop.core.hit.BodyPose;
@@ -33,7 +35,6 @@ import java.util.List;
  */
 final class Consequences {
 	static final Identifier CRAWL_SPEED = Identifier.fromNamespaceAndPath(ChopChop.ID, "crawl");
-	static final Identifier LIMP_SPEED = Identifier.fromNamespaceAndPath(ChopChop.ID, "limp");
 
 	private record Headless(LivingEntity entity, DamageSource source, int[] ticks) {
 	}
@@ -101,6 +102,7 @@ final class Consequences {
 	}
 
 	static void tick(MinecraftServer server) {
+		keepLimping(server);
 		if (!FROZEN.isEmpty()) {
 			Iterator<Map.Entry<Mob, int[]>> frozen = FROZEN.entrySet().iterator();
 			while (frozen.hasNext()) {
@@ -170,11 +172,11 @@ final class Consequences {
 	}
 
 	static void clear(LivingEntity entity) {
+		stopLimping(entity);
 		HEADLESS.remove(entity.getUUID());
 		AttributeInstance speed = entity.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (speed != null) {
 			speed.removeModifier(CRAWL_SPEED);
-			speed.removeModifier(LIMP_SPEED);
 		}
 	}
 
@@ -185,14 +187,31 @@ final class Consequences {
 	}
 
 	/**
-	 * A leg cut off: slower, like Slowness I (without its icon and particles). A body without legs that lies or
-	 * crawls has its own pace and is left alone.
+	 * A leg cut off: Slowness, with its icon, for as long as the leg is gone. Endless and quiet (no particles); put
+	 * back by {@link #keepLimping} when milk or a command takes it. A respawned player starts whole and without it.
 	 */
-	private static void limp(LivingEntity entity, WoundState state, WoundRules rules) {
-		AttributeInstance speed = entity.getAttribute(Attributes.MOVEMENT_SPEED);
-		if (speed == null || speed.hasModifier(LIMP_SPEED) || state.legsGone() == 0 || rules.getLimpSpeed() >= 1) return;
-		// transient: the wounds of mobs are not saved, and a respawned player starts whole
-		speed.addTransientModifier(new AttributeModifier(LIMP_SPEED, rules.getLimpSpeed() - 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+	static void limp(LivingEntity entity, WoundState state, WoundRules rules) {
+		if (state == null || state.legsGone() == 0 || rules.getLimpSlowness() <= 0 || !entity.isAlive()) return;
+		var current = entity.getEffect(MobEffects.SLOWNESS);
+		int amplifier = rules.getLimpSlowness() - 1;
+		if (current != null && current.getAmplifier() >= amplifier) return;
+		entity.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, MobEffectInstance.INFINITE_DURATION, amplifier, true, false, true));
+	}
+
+	/**
+	 * Every two seconds: players without a leg still limp.
+	 */
+	static void keepLimping(MinecraftServer server) {
+		if (server.getTickCount() % 40 != 0) return;
+		WoundRules rules = ChopServer.rules();
+		if (rules == null || rules.getLimpSlowness() <= 0) return;
+		for (var player : server.getPlayerList().getPlayers()) limp(player, ChopServer.wounds(player), rules);
+	}
+
+	private static void stopLimping(LivingEntity entity) {
+		var current = entity.getEffect(MobEffects.SLOWNESS);
+		// only the endless one of a lost leg, not a potion or an arrow
+		if (current != null && current.isInfiniteDuration() && current.isAmbient()) entity.removeEffect(MobEffects.SLOWNESS);
 	}
 
 	private static void slow(LivingEntity entity, WoundRules rules) {

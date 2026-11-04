@@ -171,6 +171,10 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		storageKey = new NamespacedKey(this, "wounds");
 		reload();
 		consequences = new PaperConsequences(this);
+		// a player without a leg keeps limping: its Slowness comes back if milk or a command takes it
+		getServer().getScheduler().runTaskTimer(this, () -> {
+			for (Player player : getServer().getOnlinePlayers()) consequences.limp(player, book.get(player.getUniqueId()), rules);
+		}, 40, 40);
 		book = new WoundBook(profiles, new Random());
 		getServer().getMessenger().registerIncomingPluginChannel(this, Protocol.CHANNEL, this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Protocol.CHANNEL);

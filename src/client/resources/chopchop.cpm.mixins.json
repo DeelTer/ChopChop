@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "ru.deelter.chopchop.mixin.cpm",
+	"plugin": "ru.deelter.chopchop.mixin.cpm.CpmMixinPlugin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ModelDefinitionAccessor",
+		"RedirectHolderMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

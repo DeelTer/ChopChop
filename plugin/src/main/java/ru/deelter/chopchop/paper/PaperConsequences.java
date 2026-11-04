@@ -26,7 +26,6 @@ import java.util.concurrent.ThreadLocalRandom;
 final class PaperConsequences {
 	private final JavaPlugin plugin;
 	private final NamespacedKey crawlKey;
-	private final NamespacedKey limpKey;
 	private final Set<UUID> headless = new HashSet<>();
 	/**
 	 * set while a headless body is killed by the plugin itself
@@ -41,7 +40,6 @@ final class PaperConsequences {
 	PaperConsequences(JavaPlugin plugin) {
 		this.plugin = plugin;
 		this.crawlKey = new NamespacedKey(plugin, "crawl");
-		this.limpKey = new NamespacedKey(plugin, "limp");
 	}
 
 	/**
@@ -156,13 +154,13 @@ final class PaperConsequences {
 	}
 
 	void clear(LivingEntity entity) {
+		stopLimping(entity);
 		if (entity instanceof Mob mob && lying.remove(mob)) mob.setAware(true);
 		headless.remove(entity.getUniqueId());
 		if (entity instanceof Player player) player.setPose(Pose.STANDING, false);
 		AttributeInstance speed = entity.getAttribute(Attribute.MOVEMENT_SPEED);
 		if (speed != null) {
 			speed.removeModifier(crawlKey);
-			speed.removeModifier(limpKey);
 		}
 	}
 
@@ -206,13 +204,22 @@ final class PaperConsequences {
 	}
 
 	/**
-	 * A leg cut off: slower, like Slowness I without its icon. Transient, as the wounds of mobs are not saved.
+	 * A leg cut off: Slowness, with its icon, for as long as the leg is gone. Endless and quiet (no particles); the
+	 * plugin puts it back every two seconds when milk or a command takes it.
 	 */
-	private void limp(LivingEntity entity, WoundState state, WoundRules rules) {
-		AttributeInstance speed = entity.getAttribute(Attribute.MOVEMENT_SPEED);
-		if (speed == null || speed.getModifier(limpKey) != null || state.legsGone() == 0 || rules.getLimpSpeed() >= 1) return;
-		speed.addTransientModifier(new AttributeModifier(limpKey, rules.getLimpSpeed() - 1.0, AttributeModifier.Operation.MULTIPLY_SCALAR_1,
-				EquipmentSlotGroup.ANY));
+	void limp(LivingEntity entity, WoundState state, WoundRules rules) {
+		if (state == null || state.legsGone() == 0 || rules.getLimpSlowness() <= 0 || entity.isDead()) return;
+		org.bukkit.potion.PotionEffect current = entity.getPotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
+		int amplifier = rules.getLimpSlowness() - 1;
+		if (current != null && current.getAmplifier() >= amplifier) return;
+		entity.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS,
+				org.bukkit.potion.PotionEffect.INFINITE_DURATION, amplifier, true, false, true));
+	}
+
+	private static void stopLimping(LivingEntity entity) {
+		org.bukkit.potion.PotionEffect current = entity.getPotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
+		// only the endless one of a lost leg, not a potion or an arrow
+		if (current != null && current.isInfinite() && current.isAmbient()) entity.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
 	}
 
 	private void slow(LivingEntity entity, WoundRules rules) {

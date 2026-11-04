@@ -70,6 +70,43 @@ ChopChopApi.isHandless(zombie, "right");        // the arm with that hand is cut
 
 Use these for gameplay: a fighter without the right hand cannot hold a sword, a legless one cannot dodge, and so on.
 
+### All the wounds at once, without depending on ChopChop
+
+Two methods return plain Java values only (maps, strings, numbers, booleans), so another mod or plugin can call
+them through reflection, with no compile or runtime dependency and no ChopChop classes in its code:
+
+```java
+Map<String, Object> wounds = ChopChopApi.woundsOf(uuid);           // null: whole, or unknown
+Map<UUID, Map<String, Object>> all = ChopChopApi.playerWounds();   // every online player that has wounds
+```
+
+| key | type | |
+|---|---|---|
+| `profile` | String | the body profile, `"player"` |
+| `revision` | Integer | counted up on every change |
+| `headless` | Boolean | the head came off |
+| `legless` | Boolean | every leg is cut off |
+| `legsGone` | Integer | legs cut off, at any height |
+| `parts` | Map<String, Map<String, Object>> | the damaged parts by name (`"right_arm"`), each below |
+| `parts.*.carved` | Integer | voxels carved out by wounds |
+| `parts.*.voxels` | Integer | voxels of the whole part |
+| `parts.*.wounded` | Double | carved / voxels, 0 to 1 |
+| `parts.*.severed` | Boolean | cut off at some height |
+| `parts.*.remaining` | Double | share of the part still on, 0 to 1 |
+| `parts.*.hand` | String | `"right"` or `"left"`, only for an arm with a hand |
+| `parts.*.leg` | Boolean | the body stands on it |
+
+The maps are copies, server thread only. Through reflection:
+
+```java
+// Fabric: ru.deelter.chopchop.api.ChopChopApi, Paper: ru.deelter.chopchop.paper.api.ChopChopApi
+Class<?> api = Class.forName("ru.deelter.chopchop.api.ChopChopApi");
+@SuppressWarnings("unchecked")
+Map<UUID, Map<String, Object>> all = (Map<UUID, Map<String, Object>>) api.getMethod("playerWounds").invoke(null);
+```
+On Paper load the class with the ChopChop plugin's class loader
+(`Bukkit.getPluginManager().getPlugin("ChopChop").getClass().getClassLoader()`).
+
 ## Finding where a blow lands
 
 ```java

@@ -53,6 +53,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			Vec3 base = world.getServer().computeOnServer(server -> player(server).position());
 			// first: it needs no mobs, and the scenes after it differ between the versions of the game
 			limbRules(context, world, base);
+			selfInF5(context, world, base);
 			List<Integer> ids = world.getServer().computeOnServer(server -> {
 				ServerLevel level = player(server).level();
 				List<Integer> list = new ArrayList<>();
@@ -279,6 +280,29 @@ public class ChopClientGameTest implements FabricClientGameTest {
 	 * What a player without some limbs can still do, on its own client: wounds put on the client only, as the
 	 * server would send them.
 	 */
+	/**
+	 * The own body in third person shows its wounds: the right arm off and the body cut, seen from the front.
+	 */
+	private static void selfInF5(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
+		world.getServer().runOnServer(server -> player(server).teleportTo(player(server).level(), base.x - 32, base.y, base.z, java.util.Set.of(), 0, 0, true));
+		context.waitTicks(5);
+		context.runOnClient(client -> {
+			var profile = ru.deelter.chopchop.ChopChop.getProfiles().byId("player");
+			WoundState state = new WoundState(profile);
+			state.part(profile.part("right_arm").getIndex()).sever(3);
+			var body = state.part(profile.part("body").getIndex());
+			for (int x = 1; x < 7; x++) for (int z = 0; z < 2; z++) body.carve(x, 5, z);
+			ClientWounds.put(client.player.getId(), state);
+			client.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+		});
+		context.waitTicks(5);
+		context.takeScreenshot("chopchop-self-f5");
+		context.runOnClient(client -> {
+			ClientWounds.clear(client.player.getId());
+			client.options.setCameraType(CameraType.FIRST_PERSON);
+		});
+	}
+
 	private static void limbRules(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = player(server);

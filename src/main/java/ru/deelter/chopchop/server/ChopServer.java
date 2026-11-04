@@ -58,6 +58,7 @@ public final class ChopServer {
 
 	private static ServerConfig config;
 	private static WoundBook book;
+	private static MinecraftServer running;
 	private static Profiles profiles;
 	/**
 	 * players whose client said hello with a version this server speaks
@@ -185,6 +186,7 @@ public final class ChopServer {
 
 	public static void init() {
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+			running = server;
 			config = ServerConfig.load();
 			// a copy of its own: the assignments of one world must not stay for the next world of the same game
 			profiles = Profiles.loadBuiltin();
@@ -300,6 +302,20 @@ public final class ChopServer {
 	/**
 	 * What the server knows of an entity's wounds, null when it is whole.
 	 */
+	/**
+	 * By UUID: what the server knows of the wounds of an entity, null when it is whole.
+	 */
+	public static WoundState wounds(UUID id) {
+		return book == null ? null : book.get(id);
+	}
+
+	/**
+	 * The server that runs now, null between worlds.
+	 */
+	public static MinecraftServer server() {
+		return book == null ? null : running;
+	}
+
 	public static WoundState wounds(Entity entity) {
 		return book == null ? null : book.get(entity.getUUID());
 	}

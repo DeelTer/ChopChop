@@ -56,8 +56,8 @@ severing:
   legless-head-hits: 1
   # speed of a crawling mob (legless-mobs: crawl), share of its usual speed
   crawl-speed: 0.35
-  # speed with a leg cut off, share of the usual (0.85 is like Slowness I, 1 turns it off)
-  limp-speed: 0.85
+  # Slowness level while a leg is cut off (1: Slowness I, 0: none); put back if milk takes it
+  limp-slowness: 1
 explosions:
   # blasts tear the side of the body facing them; above sever-damage limbs fly off, the closer the more
   enabled: true

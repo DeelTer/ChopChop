@@ -37,7 +37,7 @@ final class PaperConfig {
 		rules.setHeadlessPlayerSeconds(config.getDouble("severing.headless-player-seconds", rules.getHeadlessPlayerSeconds()));
 		rules.setLegless(config.getString("severing.legless", rules.getLegless()));
 		rules.setCrawlSpeed(config.getDouble("severing.crawl-speed", rules.getCrawlSpeed()));
-		rules.setLimpSpeed(config.getDouble("severing.limp-speed", rules.getLimpSpeed()));
+		rules.setLimpSlowness(config.getInt("severing.limp-slowness", rules.getLimpSlowness()));
 		rules.setLeglessMobs(config.getString("severing.legless-mobs", rules.getLeglessMobs()));
 		rules.setLeglessHeadHits(config.getInt("severing.legless-head-hits", rules.getLeglessHeadHits()));
 		rules.setOtherSources(config.getString("other-sources", rules.getOtherSources()));

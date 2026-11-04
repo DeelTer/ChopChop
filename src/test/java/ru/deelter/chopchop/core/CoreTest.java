@@ -144,6 +144,28 @@ class CoreTest {
 	}
 
 	@Test
+	void snapshotIsPlainValues() {
+		BodyProfile profile = PROFILES.byId("player");
+		WoundState state = new WoundState(profile);
+		state.part(profile.part("right_arm").getIndex()).sever(6);
+		state.part(profile.part("body").getIndex()).carve(1, 1, 0);
+		var body = ru.deelter.chopchop.core.api.BodyOps.snapshot(state);
+		assertEquals("player", body.get("profile"));
+		assertEquals(false, body.get("headless"));
+		@SuppressWarnings("unchecked")
+		var parts = (java.util.Map<String, java.util.Map<String, Object>>) body.get("parts");
+		assertEquals(2, parts.size());
+		assertEquals(true, parts.get("right_arm").get("severed"));
+		assertEquals(0.5, (Double) parts.get("right_arm").get("remaining"), 1e-9);
+		assertEquals("right", parts.get("right_arm").get("hand"));
+		assertEquals(1, parts.get("body").get("carved"));
+		// nothing but plain Java types inside
+		for (var part : parts.values()) for (Object v : part.values()) {
+			assertTrue(v instanceof String || v instanceof Number || v instanceof Boolean, String.valueOf(v));
+		}
+	}
+
+	@Test
 	void legKickTravelsAndLegsAreCounted() throws Exception {
 		assertEquals(1, Protocol.readLimb(Protocol.limb(1)));
 		assertEquals(-1, Protocol.readLimb(new byte[]{Protocol.C_LIMB, 7}));
