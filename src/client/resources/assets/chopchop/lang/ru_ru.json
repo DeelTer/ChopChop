@@ -21,6 +21,8 @@
   "chopchop.config.headCamSeconds": "Камера головы до экрана смерти, секунд",
   "chopchop.config.fountains": "Фонтанчики крови из свежих обрубков",
   "chopchop.config.killCam": "Kill-cam, когда отрубаешь голову",
+  "chopchop.config.ownCorpse": "Видеть свой труп после смерти",
+  "chopchop.config.woundsThroughArmor": "Раны видны сквозь броню",
   "chopchop.config.killCamSeconds": "Длина kill-cam, десятые секунды",
   "chopchop.config.noCloth": "Установите Cloth Config, чтобы менять настройки здесь. Файл: config/chopchop-client.json"
 }

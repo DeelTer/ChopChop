@@ -64,7 +64,8 @@ public final class KillCam {
 	}
 
 	static void offer(Debris.Chunk head, int entityId) {
-		if (expecting <= 0 || entityId != victim) return;
+		// a player killed with the chop lies as a copy of itself: its head flies from the copy
+		if (expecting <= 0 || entityId != victim && ru.deelter.chopchop.client.Corpses.sourceOf(entityId) != victim) return;
 		if (chunk != null) chunk.keep(false);
 		chunk = head;
 		chunk.keep(true);

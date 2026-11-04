@@ -27,6 +27,16 @@ public final class WoundEngine {
 	 */
 	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, WoundRules rules,
 								RandomGenerator random) {
+		return apply(state, hit, weapon, damage, lethal, 0, rules, random);
+	}
+
+	/**
+	 * @param sharpness level of Sharpness on the blade: limbs wear through faster and come off more often, and every
+	 *                  {@code sharpnessHeadLevels} levels a chop at a head counts one more
+	 */
+	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, int sharpness,
+								WoundRules rules, RandomGenerator random) {
+		double sharp = weapon.edged() ? Math.max(0, sharpness) * rules.getSharpnessSeverBonus() : 0;
 		PartState part = state.part(hit.part());
 		BodyPart def = part.getPart();
 		WoundRules.WeaponRule weaponRule = rules.weapon(weapon);
@@ -58,17 +68,18 @@ public final class WoundEngine {
 					// a body lying without legs loses its head quicker
 					int needed = state.legless() && rules.getLeglessHeadHits() > 0 ? Math.min(seg.getHits(), rules.getLeglessHeadHits()) : seg.getHits();
 					int count = rules.getHeadHitDamage() > 0 ? 1 + (int) (damage / rules.getHeadHitDamage()) : 1;
+					if (weapon.edged() && rules.getSharpnessHeadLevels() > 0) count += Math.max(0, sharpness) / rules.getSharpnessHeadLevels();
 					int total = 0;
 					for (int i = 0; i < count; i++) total = part.addSegmentHit(segment);
 					off = total >= needed || lethal && random.nextDouble() < rules.getLethalHeadChance();
 				} else {
-					float worn = (float) (damage * weaponRule.sever() * (1 + over * rules.getSeverHeavyBonus()));
+					float worn = (float) (damage * weaponRule.sever() * (1 + over * rules.getSeverHeavyBonus()) * (1 + sharp));
 					float total = part.addSegmentDamage(segment, worn);
-					double chance = Math.min(0.95, rules.getSeverChance() + over * rules.getSeverChancePerDamage());
+					double chance = Math.min(0.95, (rules.getSeverChance() + over * rules.getSeverChancePerDamage()) * (1 + sharp));
 					off = damage >= rules.getMinSeverDamage() && total >= seg.getDurability() * rules.getDurabilityMultiplier()
 							&& random.nextDouble() < chance;
 					// the killing blow does not wait for the limb to wear through
-					if (!off && lethal) off = random.nextDouble() < Math.min(0.95, rules.getLethalSeverChance() * Math.min(1.5, weaponRule.sever()));
+					if (!off && lethal) off = random.nextDouble() < Math.min(0.95, rules.getLethalSeverChance() * Math.min(1.5, weaponRule.sever()) * (1 + sharp));
 				}
 				if (off && part.sever(seg.getCut())) severedAt = seg.getCut();
 			}

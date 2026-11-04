@@ -59,6 +59,8 @@ final class PaperConfig {
 		rules.setLethalSeverChance(config.getDouble("severing.lethal-chance", rules.getLethalSeverChance()));
 		rules.setLethalHeadChance(config.getDouble("severing.lethal-head-chance", rules.getLethalHeadChance()));
 		rules.setHeadHitDamage(config.getDouble("severing.head-hit-damage", rules.getHeadHitDamage()));
+		rules.setSharpnessSeverBonus(config.getDouble("severing.sharpness-bonus", rules.getSharpnessSeverBonus()));
+		rules.setSharpnessHeadLevels(config.getInt("severing.sharpness-head-levels", rules.getSharpnessHeadLevels()));
 		rules.setExplosionWoundDepth(config.getInt("explosions.wound-depth", rules.getExplosionWoundDepth()));
 		rules.setExplosionWoundScale(config.getDouble("explosions.wound-scale", rules.getExplosionWoundScale()));
 		rules.setExplosionCarvedShare(config.getDouble("explosions.max-carved-share", rules.getExplosionCarvedShare()));

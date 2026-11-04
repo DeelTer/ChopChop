@@ -84,6 +84,13 @@ public final class WoundRules {
 	 */
 	private double headHitDamage = 8.0;
 	/**
+	 * Sharpness on a sword or an axe: per level, limbs wear through this much faster and come off this much more
+	 * often (0.15: Sharpness V is +75%). And every {@code sharpnessHeadLevels} levels add a chop to each chop at a head
+	 * (3: Sharpness III and up take a head in two chops). 0 turns either off
+	 */
+	private double sharpnessSeverBonus = 0.15;
+	private int sharpnessHeadLevels = 3;
+	/**
 	 * Heads come off. A head segment counts hits (three chops by default) instead of damage
 	 */
 	private boolean heads = true;

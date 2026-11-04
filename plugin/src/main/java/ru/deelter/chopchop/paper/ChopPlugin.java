@@ -149,7 +149,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	 * @param from  where the blast went off
 	 */
 	private record Pending(LivingEntity target, double healthBefore, Hit hit, WeaponKind weapon, Entity attacker, List<Hit> blast,
-						   Location from, double dealt) {
+						   Location from, double dealt, int sharpness) {
 	}
 
 	private static ChopPlugin instance;
@@ -275,11 +275,12 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			List<Hit> hits = HitLocator.blast(state, pose(target).crawling(state, rules), from.getX(), from.getY(), from.getZ(),
 					target.getWidth(), target.getHeight(), rules.getExplosionWounds(), java.util.concurrent.ThreadLocalRandom.current());
 			if (hits.isEmpty()) return;
-			pending.add(new Pending(target, health(target), hits.getFirst(), WeaponKind.OTHER, attacker(event), hits, from, event.getFinalDamage()));
+			pending.add(new Pending(target, health(target), hits.getFirst(), WeaponKind.OTHER, attacker(event), hits, from, event.getFinalDamage(), 0));
 		} else {
 			Located located = locate(target, event, state);
 			if (located == null) return;
-			pending.add(new Pending(target, health(target), located.hit, located.weapon, attacker(event), null, null, event.getFinalDamage()));
+			pending.add(new Pending(target, health(target), located.hit, located.weapon, attacker(event), null, null, event.getFinalDamage(),
+					located.sharpness));
 		}
 		if (!flushScheduled) {
 			flushScheduled = true;
@@ -310,7 +311,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			List<byte[]> messages = p.blast != null
 					? book.blast(target.getUniqueId(), target.getEntityId(), state, p.blast, lost, blastHead(target, state, p.from), rules)
 					: book.hit(target.getUniqueId(), target.getEntityId(), state, p.hit, p.weapon,
-					target.isDead() ? (float) Math.max(lost, Math.min(40, p.dealt)) : lost, target.isDead(), rules, attacker);
+					target.isDead() ? (float) Math.max(lost, Math.min(40, p.dealt)) : lost, target.isDead(), p.sharpness, rules, attacker);
 			for (byte[] message : messages) broadcast(target, message);
 			if (!wasHeadless && state.headless() && attacker >= 0 && p.blast == null && "freeze".equalsIgnoreCase(rules.getKillCamThreats())) {
 				consequences.freeze(threats, rules);
@@ -449,7 +450,11 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		return entity.getHealth() + entity.getAbsorptionAmount();
 	}
 
-	private record Located(Hit hit, WeaponKind weapon) {
+	private record Located(Hit hit, WeaponKind weapon, int sharpness) {
+		Located(Hit hit, WeaponKind weapon) {
+			this(hit, weapon, 0);
+		}
+
 	}
 
 	private Located locate(LivingEntity target, EntityDamageEvent event, WoundState state) {
@@ -503,7 +508,8 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			}
 			if (hit == null) hit = HitLocator.castOrNearest(state, pose, eye.getX(), eye.getY(), eye.getZ(), dir.getX(), dir.getY(), dir.getZ(), reach);
 			ItemStack weapon = living.getEquipment() == null ? null : living.getEquipment().getItemInMainHand();
-			return hit == null ? null : new Located(hit, classify(weapon));
+			return hit == null ? null : new Located(hit, classify(weapon),
+					weapon == null ? 0 : weapon.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.SHARPNESS));
 		}
 		if (!"coarse".equalsIgnoreCase(rules.getOtherSources())) return null;
 		Vector center = target.getBoundingBox().getCenter();

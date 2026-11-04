@@ -37,6 +37,10 @@ severing:
   lethal-head-chance: 0.45
   # a chop at the head counts as 1 + damage / head-hit-damage chops (0: always one)
   head-hit-damage: 8.0
+  # Sharpness on a sword or an axe: per level, limbs wear through and come off this much more (0.15: V is +75%)
+  sharpness-bonus: 0.15
+  # every this many levels of Sharpness a chop at a head counts one more (3: Sharpness III takes a head in two)
+  sharpness-head-levels: 3
   # heads come off after three chops of a sword or an axe (the count is in the profile)
   heads: true
   # a body without its head dies: a player at once, a mob after running around blind

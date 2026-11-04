@@ -172,6 +172,7 @@ public final class Debris {
 		CHUNKS.clear();
 		HeadCam.stop();
 		KillCam.stop();
+		DeathCam.stop();
 	}
 
 	/**
@@ -229,7 +230,8 @@ public final class Debris {
 			Chunk chunk = new Chunk(skin, texture, part, mask, cut, pieces, center, entity, size, detach.flung(), detach.away(), level.getRandom());
 			if (ClientConfig.get().isSkeletonInside()) chunk.skeleton = SkeletonTexture.of(state.getProfile());
 			CHUNKS.add(chunk);
-			if (chunk.head && Minecraft.getInstance().player != null && entityId == Minecraft.getInstance().player.getId()) {
+			if (chunk.head && Minecraft.getInstance().player != null
+					&& (entityId == Minecraft.getInstance().player.getId() || ru.deelter.chopchop.client.Corpses.sourceOf(entityId) == Minecraft.getInstance().player.getId())) {
 				HeadCam.follow(chunk);
 			} else if (chunk.head) {
 				KillCam.offer(chunk, entityId);

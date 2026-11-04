@@ -77,6 +77,17 @@ public final class ClientWounds {
 		entry.detaches.add(new Detach(part, cut, before, System.nanoTime(), flung, away));
 	}
 
+	/**
+	 * Cuts noted for one entity go to another: the copy drawn as the body of a dead player, while the player itself is
+	 * hidden and would never be drawn to turn them into pieces.
+	 */
+	public static void moveDetaches(int from, int to) {
+		Entry source = ENTRIES.get(from);
+		if (source == null || source.detaches.isEmpty()) return;
+		ENTRIES.computeIfAbsent(to, id -> new Entry()).detaches.addAll(source.detaches);
+		source.detaches.clear();
+	}
+
 	public static List<Detach> takeDetaches(int entityId) {
 		Entry entry = ENTRIES.get(entityId);
 		if (entry == null || entry.detaches.isEmpty()) return List.of();

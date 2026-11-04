@@ -59,6 +59,10 @@ public final class ClothScreen {
 				.setDefaultValue((int) defaults.getHeadCamSeconds()).setSaveConsumer(value -> config.setHeadCamSeconds(value)).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.fountains"), config.isFountains())
 				.setDefaultValue(defaults.isFountains()).setSaveConsumer(config::setFountains).build());
+		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.ownCorpse"), config.isOwnCorpse())
+				.setDefaultValue(defaults.isOwnCorpse()).setSaveConsumer(config::setOwnCorpse).build());
+		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.woundsThroughArmor"), config.isWoundsThroughArmor())
+				.setDefaultValue(defaults.isWoundsThroughArmor()).setSaveConsumer(config::setWoundsThroughArmor).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.killCam"), config.isKillCam())
 				.setDefaultValue(defaults.isKillCam()).setSaveConsumer(config::setKillCam).build());
 		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.killCamSeconds"), (int) Math.round(config.getKillCamSeconds() * 10), 5, 60)

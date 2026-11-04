@@ -33,7 +33,14 @@ final class FabricHits {
 	private FabricHits() {
 	}
 
-	record Resolved(Hit hit, WeaponKind weapon) {
+	/**
+	 * @param sharpness level of Sharpness on the weapon, 0 for anything but a blade swung
+	 */
+	record Resolved(Hit hit, WeaponKind weapon, int sharpness) {
+		Resolved(Hit hit, WeaponKind weapon) {
+			this(hit, weapon, 0);
+		}
+
 	}
 
 	static BodyPose pose(LivingEntity entity) {
@@ -93,7 +100,7 @@ final class FabricHits {
 			if (hit == null) hit = HitLocator.castOrNearest(state, pose, eye.x, eye.y, eye.z, dir.x, dir.y, dir.z, reach);
 			ItemStack weapon = source.getWeaponItem();
 			if (weapon == null || weapon.isEmpty()) weapon = living.getMainHandItem();
-			return hit == null ? null : new Resolved(hit, classify(weapon));
+			return hit == null ? null : new Resolved(hit, classify(weapon), sharpness(living, weapon));
 		}
 
 		if (!"coarse".equalsIgnoreCase(rules.getOtherSources())) return null;
@@ -114,6 +121,13 @@ final class FabricHits {
 		dir = dir.normalize();
 		Hit hit = HitLocator.castOrNearest(state, pose, from.x, from.y, from.z, dir.x, dir.y, dir.z, from.distanceTo(center) + 3);
 		return hit == null ? null : new Resolved(hit, WeaponKind.OTHER);
+	}
+
+	static int sharpness(LivingEntity holder, ItemStack weapon) {
+		if (weapon == null || weapon.isEmpty()) return 0;
+		var sharpness = holder.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.get(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS);
+		return sharpness.map(h -> net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(h, weapon)).orElse(0);
 	}
 
 	static WeaponKind classify(ItemStack stack) {

@@ -64,6 +64,14 @@ public final class ClientConfig {
 	/**
 	 * when you take a head, the camera swings around it for a moment
 	 */
+	/**
+	 * after death the camera leaves the eyes and looks at the own body lying there
+	 */
+	private boolean ownCorpse = true;
+	/**
+	 * armour shows the wounds under it as holes; off, armour only loses what is cut off
+	 */
+	private boolean woundsThroughArmor = true;
 	private boolean killCam = true;
 	private double killCamSeconds = 2.5;
 

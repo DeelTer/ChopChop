@@ -27,6 +27,7 @@ public abstract class FirstPersonItemsMixin {
 							   SubmitNodeCollector collector, int lightCoords, CallbackInfo ci) {
 		// looking out of a flying head: no hands
 		if (ru.deelter.chopchop.client.render.HeadCam.active() || ru.deelter.chopchop.client.render.HeadCam.expecting()
+				|| ru.deelter.chopchop.client.render.DeathCam.active()
 				|| ru.deelter.chopchop.client.render.KillCam.active()) {
 			ci.cancel();
 			return;

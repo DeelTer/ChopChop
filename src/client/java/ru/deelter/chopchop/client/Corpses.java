@@ -203,6 +203,8 @@ public final class Corpses {
 			size(body, player);
 			pickWay(level, copy, body);
 			BODIES.put(id, body);
+			// the own body: the camera leaves the eyes to look at it
+			if (player == Minecraft.getInstance().player) ru.deelter.chopchop.client.render.DeathCam.follow(id, message.dx(), message.dz());
 		} else {
 			Body body = new Body(message, message.entityId(), null, -1);
 			size(body, living);
@@ -291,6 +293,14 @@ public final class Corpses {
 
 	public static Body get(int entityId) {
 		return BODIES.isEmpty() ? null : BODIES.get(entityId);
+	}
+
+	/**
+	 * The player a body is the copy of, -1 for a mob or no body.
+	 */
+	public static int sourceOf(int entityId) {
+		Body body = get(entityId);
+		return body == null ? -1 : body.sourceId;
 	}
 
 	/**
@@ -618,6 +628,8 @@ public final class Corpses {
 			ClientWounds.put(body.entityId, wounds);
 			ClientWounds.get(body.entityId);
 		}
+		// and its cuts: a head off at the death flies from the copy, the real player is not drawn
+		ClientWounds.moveDetaches(body.sourceId, body.entityId);
 	}
 
 	/**

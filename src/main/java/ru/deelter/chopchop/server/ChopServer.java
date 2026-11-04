@@ -337,7 +337,8 @@ public final class ChopServer {
 		}
 		boolean lethal = target.isDeadOrDying();
 		float damage = lethal ? Math.max(lost, dealt) : lost;
-		List<byte[]> messages = book.hit(target.getUUID(), target.getId(), state, hit, resolved.weapon(), damage, lethal, rules, attacker);
+		List<byte[]> messages = book.hit(target.getUUID(), target.getId(), state, hit, resolved.weapon(), damage, lethal,
+				resolved.sharpness(), rules, attacker);
 		if (player && book.get(target.getUUID()) != null) PLAYERS.add(target.getUUID());
 		for (byte[] message : messages) broadcast(target, message);
 		Consequences.apply(target, source, state, wasLegless, wasHeadless, rules);

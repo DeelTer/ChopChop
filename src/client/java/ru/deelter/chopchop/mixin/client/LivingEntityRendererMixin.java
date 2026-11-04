@@ -116,6 +116,19 @@ public abstract class LivingEntityRendererMixin {
 		}
 	}
 
+	/**
+	 * The layers (a skull or a player head worn, items in hands, a cape) are placed from the model as posed here,
+	 * before them, not from the deferred draw that poses a dead body limp: pose them the same, or a worn head floats
+	 * where the head would be standing.
+	 */
+	@Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+			at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/EntityModel;setupAnim(Ljava/lang/Object;)V", shift = At.Shift.AFTER))
+	private void chopchop$layersPosed(LivingEntityRenderState state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera,
+									  CallbackInfo ci) {
+		float[] corpse = ((ChopRenderState) state).chopchop$corpse();
+		if (corpse != null) ru.deelter.chopchop.client.render.Corpse.pose(((LivingEntityRenderer<?, ?, ?>) (Object) this).getModel(), corpse);
+	}
+
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@org.spongepowered.asm.mixin.Unique
 	private net.minecraft.resources.Identifier chopchop$texture(LivingEntityRenderState state) {

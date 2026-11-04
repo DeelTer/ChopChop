@@ -73,6 +73,7 @@ public final class ChopChopClient implements ClientModInitializer {
 			Effects.tick(client);
 			HeadCam.tick(client);
 			KillCam.tick(client);
+			ru.deelter.chopchop.client.render.DeathCam.tick(client);
 		});
 		LevelRenderEvents.COLLECT_SUBMITS.register(Debris::submit);
 		LevelRenderEvents.COLLECT_SUBMITS.register(Corpses::submit);

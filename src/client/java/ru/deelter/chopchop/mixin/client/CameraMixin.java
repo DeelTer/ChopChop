@@ -49,6 +49,10 @@ public abstract class CameraMixin {
 			setRotation(view.yaw(), view.pitch());
 			setPosition(view.position());
 			detached = true;
+		} else if ((view = ru.deelter.chopchop.client.render.DeathCam.view(getCameraEntityPartialTicks(deltaTracker), position(), yRot(), xRot())) != null) {
+			setRotation(view.yaw(), view.pitch());
+			setPosition(view.position());
+			detached = true;
 		} else if (HeadCam.expecting()) {
 			// the body is drawn this frame, so the head can be taken from it
 			detached = true;

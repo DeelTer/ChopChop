@@ -178,7 +178,8 @@ public final class GoreRender {
 		if (partState.pristine()) return false;
 		boolean isOverlay = !binding.name().equals(part.getName());
 
-		boolean severedOnly = role == Role.ARMOR || far;
+		// armour shows the wounds under it as holes (nothing inside of it), unless the player wants it whole
+		boolean severedOnly = role == Role.ARMOR && !ClientConfig.get().isWoundsThroughArmor() || far;
 		if (severedOnly && !partState.severed()) return false;
 		VoxelMask mask = severedOnly ? (x, y, z) -> y >= partState.getSeveredAt() : partState::gone;
 		VoxelMesher.Grid grid = VoxelMesher.Grid.of(cube, binding, part);

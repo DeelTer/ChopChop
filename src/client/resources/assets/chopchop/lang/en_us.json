@@ -21,6 +21,8 @@
   "chopchop.config.headCamSeconds": "Head camera before the death screen, seconds",
   "chopchop.config.fountains": "Blood squirting from fresh stumps",
   "chopchop.config.killCam": "Kill cam when you take a head",
+  "chopchop.config.ownCorpse": "See your own body after death",
+  "chopchop.config.woundsThroughArmor": "Wounds show through armour",
   "chopchop.config.killCamSeconds": "Kill cam length, tenths of a second",
   "chopchop.config.noCloth": "Install Cloth Config to change settings here. The file is config/chopchop-client.json"
 }

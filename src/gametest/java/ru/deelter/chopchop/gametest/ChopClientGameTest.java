@@ -157,6 +157,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			killCam(context, world, base);
 			tnt(context, world, base);
 			blownUp(context, world, base);
+			ownCorpse(context, world, base);
 			decapitate(context, world, base);
 		}
 	}
@@ -268,6 +269,32 @@ public class ChopClientGameTest implements FabricClientGameTest {
 	/**
 	 * TNT kills the player: the head always comes off and flies away from the blast, the camera in it.
 	 */
+	/**
+	 * The player dies, a player head worn: the camera leaves the eyes to look at the own body, the head item lies
+	 * on the body's head as it falls.
+	 */
+	private static void ownCorpse(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = player(server);
+			player.teleportTo(player.level(), base.x - 26, base.y, base.z, java.util.Set.of(), 0, 0, true);
+			player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(Items.PLAYER_HEAD));
+			player.invulnerableTime = 0;
+			player.hurtServer(player.level(), player.level().damageSources().generic(), 1000);
+		});
+		context.waitTicks(10);
+		boolean cam = context.computeOnClient(client -> ru.deelter.chopchop.client.render.DeathCam.active());
+		context.waitTicks(30);
+		context.runOnClient(client -> client.gui.setScreen(null));
+		context.takeScreenshot("chopchop-own-corpse");
+		System.out.println("[ChopChop gametest] ownCorpse deathcam=" + cam);
+		context.runOnClient(client -> client.player.respawn());
+		context.waitTicks(40);
+		boolean over = context.computeOnClient(client -> !ru.deelter.chopchop.client.render.DeathCam.active());
+		world.getServer().runOnServer(server -> player(server).setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY));
+		if (!cam) throw new AssertionError("No view of the own body after death");
+		if (!over) throw new AssertionError("The view of the own body stayed after respawn");
+	}
+
 	private static void blownUp(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = player(server);
@@ -336,10 +363,11 @@ public class ChopClientGameTest implements FabricClientGameTest {
 	 * The player takes a zombie's head with three chops: the camera swings around the flying head and comes back.
 	 */
 	private static void killCam(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
+		// far from the mobs of the other scenes: a monster that sees the player would cancel the kill cam
 		int victim = world.getServer().computeOnServer(server -> {
 			ServerPlayer player = player(server);
-			player.teleportTo(player.level(), base.x + 8, base.y, base.z, java.util.Set.of(), 0, 0, true);
-			return spawn(player.level(), EntityTypes.ZOMBIE, base.add(8, 0, 2.2));
+			player.teleportTo(player.level(), base.x + 30, base.y, base.z, java.util.Set.of(), 0, 0, true);
+			return spawn(player.level(), EntityTypes.ZOMBIE, base.add(30, 0, 2.2));
 		});
 		context.waitTicks(5);
 		for (int i = 0; i < 3; i++) {
@@ -348,7 +376,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 				Entity target = player.level().getEntity(victim);
 				if (!(target instanceof LivingEntity living)) return;
 				player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-				player.teleportTo(player.level(), base.x + 8, base.y, base.z, java.util.Set.of(), 0, -2, true);
+				player.teleportTo(player.level(), base.x + 30, base.y, base.z, java.util.Set.of(), 0, -2, true);
 				player.resetAttackStrengthTicker();
 				ru.deelter.chopchop.version.Entities.clearInvulnerability(living);
 				player.attack(target);

@@ -144,6 +144,30 @@ class CoreTest {
 	}
 
 	@Test
+	void sharpnessCutsSooner() {
+		BodyProfile profile = PROFILES.byId("player");
+		WoundRules rules = new WoundRules();
+		rules.setWoundChance(0);
+		rules.setSeverChance(1.0);
+		int arm = profile.part("right_arm").getIndex();
+		Hit hit = new Hit(arm, 1, 9, 1, new float[3], 0);
+		// the plain sword needs two blows to wear the forearm through, Sharpness V one
+		WoundState plain = new WoundState(profile);
+		assertFalse(WoundEngine.apply(plain, hit, WeaponKind.SWORD, 5, false, 0, rules, new Random(1)).changed());
+		WoundState sharp = new WoundState(profile);
+		assertEquals(7, WoundEngine.apply(sharp, hit, WeaponKind.SWORD, 5, false, 5, rules, new Random(1)).severedAt());
+		// a head in two chops from Sharpness III; Sharpness on anything but a blade does nothing
+		int head = profile.part("head").getIndex();
+		Hit chop = new Hit(head, 3, 4, 0, new float[3], 0);
+		WoundState heads = new WoundState(profile);
+		assertEquals(-1, WoundEngine.apply(heads, chop, WeaponKind.SWORD, 1, false, 3, rules, new Random(1)).severedAt());
+		assertEquals(0, WoundEngine.apply(heads, chop, WeaponKind.SWORD, 1, false, 3, rules, new Random(1)).severedAt());
+		WoundState blunt = new WoundState(profile);
+		for (int i = 0; i < 2; i++) WoundEngine.apply(blunt, chop, WeaponKind.BLUNT, 1, false, 5, rules, new Random(1));
+		assertFalse(blunt.headless());
+	}
+
+	@Test
 	void headFliesOnThirdChop() {
 		BodyProfile profile = PROFILES.byId("player");
 		WoundRules rules = new WoundRules();
