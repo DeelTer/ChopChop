@@ -51,6 +51,8 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			context.waitTicks(20);
 
 			Vec3 base = world.getServer().computeOnServer(server -> player(server).position());
+			// first: it needs no mobs, and the scenes after it differ between the versions of the game
+			limbRules(context, world, base);
 			List<Integer> ids = world.getServer().computeOnServer(server -> {
 				ServerLevel level = player(server).level();
 				List<Integer> list = new ArrayList<>();
@@ -273,12 +275,55 @@ public class ChopClientGameTest implements FabricClientGameTest {
 	 * The player dies, a player head worn: the camera leaves the eyes to look at the own body, the head item lies
 	 * on the body's head as it falls.
 	 */
+	/**
+	 * What a player without some limbs can still do, on its own client: wounds put on the client only, as the
+	 * server would send them.
+	 */
+	private static void limbRules(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = player(server);
+			player.teleportTo(player.level(), base.x - 32, base.y, base.z, java.util.Set.of(), 0, 60, true);
+			player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD));
+			player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.BREAD));
+		});
+		context.waitTicks(5);
+		String result = context.computeOnClient(client -> {
+			var player = client.player;
+			var profile = ru.deelter.chopchop.ChopChop.getProfiles().byId("player");
+			WoundState state = new WoundState(profile);
+			String main = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? "right_arm" : "left_arm";
+			String off = main.equals("right_arm") ? "left_arm" : "right_arm";
+			StringBuilder s = new StringBuilder();
+			// main hand off: it eats nothing, the other hand still does
+			state.part(profile.part(main).getIndex()).sever(7);
+			ClientWounds.put(player.getId(), state);
+			s.append(client.gameMode.useItem(player, InteractionHand.MAIN_HAND) == net.minecraft.world.InteractionResult.PASS ? "" : "main-used ");
+			s.append(ru.deelter.chopchop.client.Limbs.offHandDigs() ? "" : "no-offhand-dig ");
+			// both hands off: a leg digs, and kicks
+			state.part(profile.part(off).getIndex()).sever(7);
+			s.append(ru.deelter.chopchop.client.Limbs.diggingLeg() == 0 ? "" : "no-leg-dig ");
+			ru.deelter.chopchop.client.version.ClientSwings.swing(player);
+			s.append(ru.deelter.chopchop.client.render.Kicks.kicking(player.getId()) ? "" : "no-kick ");
+			// a leg off: no sprint
+			state.part(profile.part("right_leg").getIndex()).sever(7);
+			player.setSprinting(true);
+			s.append(player.isSprinting() ? "sprints " : "");
+			// everything off: nothing digs
+			state.part(profile.part("left_leg").getIndex()).sever(7);
+			s.append(ru.deelter.chopchop.client.Limbs.canDig() ? "digs-limbless " : "");
+			ClientWounds.clear(player.getId());
+			return s.toString().trim();
+		});
+		System.out.println("[ChopChop gametest] limbs " + (result.isEmpty() ? "ok" : result));
+		if (!result.isEmpty()) throw new AssertionError("Limb rules: " + result);
+	}
+
 	private static void ownCorpse(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
 		world.getServer().runOnServer(server -> {
 			ServerPlayer player = player(server);
 			player.teleportTo(player.level(), base.x - 26, base.y, base.z, java.util.Set.of(), 0, 0, true);
 			player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(Items.PLAYER_HEAD));
-			player.invulnerableTime = 0;
+			ru.deelter.chopchop.version.Entities.clearInvulnerability(player);
 			player.hurtServer(player.level(), player.level().damageSources().generic(), 1000);
 		});
 		context.waitTicks(10);
@@ -481,7 +526,8 @@ public class ChopClientGameTest implements FabricClientGameTest {
 				    "woundChance": 1.0,
 				    "severChance": 1.0,
 				    "durabilityMultiplier": 0.25,
-				    "minSeverDamage": 0.0
+				    "minSeverDamage": 0.0,
+				    "explosionWounds": 12
 				  }
 				}
 				""";

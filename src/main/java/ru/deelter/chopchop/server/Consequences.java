@@ -33,6 +33,7 @@ import java.util.List;
  */
 final class Consequences {
 	static final Identifier CRAWL_SPEED = Identifier.fromNamespaceAndPath(ChopChop.ID, "crawl");
+	static final Identifier LIMP_SPEED = Identifier.fromNamespaceAndPath(ChopChop.ID, "limp");
 
 	private record Headless(LivingEntity entity, DamageSource source, int[] ticks) {
 	}
@@ -62,6 +63,7 @@ final class Consequences {
 			HEADLESS.put(entity.getUUID(), new Headless(entity, source, new int[]{Math.max(1, ticks)}));
 		}
 		if (entity instanceof Mob mob && rules.isDisarmMobs()) disarm(mob, state, rules);
+		limp(entity, state, rules);
 	}
 
 	/**
@@ -170,13 +172,27 @@ final class Consequences {
 	static void clear(LivingEntity entity) {
 		HEADLESS.remove(entity.getUUID());
 		AttributeInstance speed = entity.getAttribute(Attributes.MOVEMENT_SPEED);
-		if (speed != null) speed.removeModifier(CRAWL_SPEED);
+		if (speed != null) {
+			speed.removeModifier(CRAWL_SPEED);
+			speed.removeModifier(LIMP_SPEED);
+		}
 	}
 
 	static void reset() {
 		HEADLESS.clear();
 		FROZEN.forEach((mob, f) -> mob.setNoAi(f[1] == 1));
 		FROZEN.clear();
+	}
+
+	/**
+	 * A leg cut off: slower, like Slowness I (without its icon and particles). A body without legs that lies or
+	 * crawls has its own pace and is left alone.
+	 */
+	private static void limp(LivingEntity entity, WoundState state, WoundRules rules) {
+		AttributeInstance speed = entity.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed == null || speed.hasModifier(LIMP_SPEED) || state.legsGone() == 0 || rules.getLimpSpeed() >= 1) return;
+		// transient: the wounds of mobs are not saved, and a respawned player starts whole
+		speed.addTransientModifier(new AttributeModifier(LIMP_SPEED, rules.getLimpSpeed() - 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 	}
 
 	private static void slow(LivingEntity entity, WoundRules rules) {

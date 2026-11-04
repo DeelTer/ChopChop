@@ -61,6 +61,14 @@ public final class Protocol {
 	 * back under the same entity id
 	 */
 	public static final byte S_CORPSE = 5;
+	/**
+	 * a player with no arm left digs with a leg: the others see that leg kick. Payload: entity, which leg (0 right, 1 left)
+	 */
+	public static final byte S_LIMB = 6;
+	/**
+	 * to the server: the player digs with a leg, its arms are gone. Payload: which leg (0 right, 1 left)
+	 */
+	public static final byte C_LIMB = 4;
 
 	public static final byte EVENT_SPLASH = 0;
 	public static final byte EVENT_WOUND = 1;
@@ -166,6 +174,26 @@ public final class Protocol {
 		});
 	}
 
+	public static byte[] limb(int leg) {
+		return new byte[]{C_LIMB, (byte) leg};
+	}
+
+	public static byte[] limb(int entityId, int leg) {
+		return write(out -> {
+			out.writeByte(S_LIMB);
+			out.writeInt(entityId);
+			out.writeByte(leg);
+		});
+	}
+
+	/**
+	 * @return the leg a client digs with, or -1 if the message is not one
+	 */
+	public static int readLimb(byte[] data) {
+		if (data == null || data.length != 2 || data[0] != C_LIMB || data[1] < 0 || data[1] > 1) return -1;
+		return data[1];
+	}
+
 	public static byte[] clear(int entityId) {
 		return write(out -> {
 			out.writeByte(S_CLEAR);
@@ -206,6 +234,7 @@ public final class Protocol {
 			case S_EVENT -> new Message.Event(in.readInt(), in.readByte(), in.readUnsignedByte(),
 					new float[]{in.readFloat(), in.readFloat(), in.readFloat()}, in.readShort(), in.available() >= 4 ? in.readInt() : -1);
 			case S_CLEAR -> new Message.Clear(in.readInt());
+			case S_LIMB -> new Message.Limb(in.readInt(), in.readUnsignedByte());
 			case S_CORPSE -> {
 				int entity = in.readInt();
 				float dx = in.readFloat(), dz = in.readFloat(), strength = in.readFloat();
@@ -320,6 +349,9 @@ public final class Protocol {
 		}
 
 		record Event(int entityId, byte kind, int part, float[] model, int severedAt, int attacker) implements Message {
+		}
+
+		record Limb(int entityId, int leg) implements Message {
 		}
 
 		record Clear(int entityId) implements Message {

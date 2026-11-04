@@ -144,6 +144,21 @@ class CoreTest {
 	}
 
 	@Test
+	void legKickTravelsAndLegsAreCounted() throws Exception {
+		assertEquals(1, Protocol.readLimb(Protocol.limb(1)));
+		assertEquals(-1, Protocol.readLimb(new byte[]{Protocol.C_LIMB, 7}));
+		var kick = assertInstanceOf(Protocol.Message.Limb.class, Protocol.readClientbound(Protocol.limb(42, 0), PROFILES));
+		assertEquals(42, kick.entityId());
+		assertEquals(0, kick.leg());
+		BodyProfile profile = PROFILES.byId("player");
+		WoundState state = new WoundState(profile);
+		assertEquals(0, state.legsGone());
+		state.part(profile.part("left_leg").getIndex()).sever(7);
+		assertEquals(1, state.legsGone());
+		assertFalse(state.legless());
+	}
+
+	@Test
 	void sharpnessCutsSooner() {
 		BodyProfile profile = PROFILES.byId("player");
 		WoundRules rules = new WoundRules();

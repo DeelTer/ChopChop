@@ -72,6 +72,15 @@ public final class WoundState {
 	/**
 	 * Every hand of a body that has hands is gone: it can hold nothing and hit with nothing.
 	 */
+	/**
+	 * How many legs are cut off, at any height.
+	 */
+	public int legsGone() {
+		int gone = 0;
+		for (PartState part : parts) if (part.getPart().isLeg() && part.severed()) gone++;
+		return gone;
+	}
+
 	public boolean armless() {
 		boolean any = false;
 		for (PartState part : parts) {

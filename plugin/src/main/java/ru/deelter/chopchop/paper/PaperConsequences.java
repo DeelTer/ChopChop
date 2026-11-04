@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 final class PaperConsequences {
 	private final JavaPlugin plugin;
 	private final NamespacedKey crawlKey;
+	private final NamespacedKey limpKey;
 	private final Set<UUID> headless = new HashSet<>();
 	/**
 	 * set while a headless body is killed by the plugin itself
@@ -40,6 +41,7 @@ final class PaperConsequences {
 	PaperConsequences(JavaPlugin plugin) {
 		this.plugin = plugin;
 		this.crawlKey = new NamespacedKey(plugin, "crawl");
+		this.limpKey = new NamespacedKey(plugin, "limp");
 	}
 
 	/**
@@ -71,6 +73,7 @@ final class PaperConsequences {
 
 	void apply(LivingEntity entity, Entity attacker, WoundState state, boolean wasLegless, boolean wasHeadless, WoundRules rules) {
 		if (entity instanceof Mob armed && rules.isDisarmMobs()) disarm(armed, state, rules);
+		limp(entity, state, rules);
 		if (!wasLegless && rules.crawls() && state.legless()) {
 			if (entity instanceof Player player) player.setPose(Pose.SWIMMING, true);
 			else if (BodyPose.crawls(state, rules) && entity instanceof Mob mob && rules.mobsLie()) lie(mob);
@@ -157,7 +160,10 @@ final class PaperConsequences {
 		headless.remove(entity.getUniqueId());
 		if (entity instanceof Player player) player.setPose(Pose.STANDING, false);
 		AttributeInstance speed = entity.getAttribute(Attribute.MOVEMENT_SPEED);
-		if (speed != null) speed.removeModifier(crawlKey);
+		if (speed != null) {
+			speed.removeModifier(crawlKey);
+			speed.removeModifier(limpKey);
+		}
 	}
 
 	/**
@@ -197,6 +203,16 @@ final class PaperConsequences {
 	 */
 	void left(Entity entity) {
 		if (entity instanceof Mob mob && lying.remove(mob)) mob.setAware(true);
+	}
+
+	/**
+	 * A leg cut off: slower, like Slowness I without its icon. Transient, as the wounds of mobs are not saved.
+	 */
+	private void limp(LivingEntity entity, WoundState state, WoundRules rules) {
+		AttributeInstance speed = entity.getAttribute(Attribute.MOVEMENT_SPEED);
+		if (speed == null || speed.getModifier(limpKey) != null || state.legsGone() == 0 || rules.getLimpSpeed() >= 1) return;
+		speed.addTransientModifier(new AttributeModifier(limpKey, rules.getLimpSpeed() - 1.0, AttributeModifier.Operation.MULTIPLY_SCALAR_1,
+				EquipmentSlotGroup.ANY));
 	}
 
 	private void slow(LivingEntity entity, WoundRules rules) {

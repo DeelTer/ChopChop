@@ -53,6 +53,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	private PaperConsequences consequences;
 	private NamespacedKey storageKey;
 	private final Set<UUID> modded = new HashSet<>();
+	private final Map<UUID, Long> lastKick = new HashMap<>();
 	/**
 	 * the last aim each player sent, for the attack that follows it
 	 */
@@ -219,6 +220,18 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 
 	@Override
 	public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] message) {
+		// a player with no arms digs with a leg: the others see it kick, at most a few times a second
+		if (Protocol.CHANNEL.equals(channel) && message.length > 0 && message[0] == Protocol.C_LIMB) {
+			int leg = Protocol.readLimb(message);
+			long now = player.getWorld().getFullTime();
+			Long last = lastKick.get(player.getUniqueId());
+			if (leg >= 0 && modded.contains(player.getUniqueId()) && (last == null || now - last >= 4)) {
+				lastKick.put(player.getUniqueId(), now);
+				byte[] kick = Protocol.limb(player.getEntityId(), leg);
+				for (Player other : player.getTrackedBy()) if (modded.contains(other.getUniqueId())) send(other, kick);
+			}
+			return;
+		}
 		if (Protocol.CHANNEL.equals(channel) && message.length > 0 && message[0] == Protocol.C_CUT) {
 			Protocol.Aim cut = Protocol.readCut(message);
 			if (cut != null && modded.contains(player.getUniqueId())) cutCorpse(player, cut);
@@ -576,6 +589,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		modded.remove(event.getPlayer().getUniqueId());
 		aims.remove(event.getPlayer().getUniqueId());
 		lastCut.remove(event.getPlayer().getUniqueId());
+		lastKick.remove(event.getPlayer().getUniqueId());
 		if (rules.isPersistPlayers()) store(event.getPlayer());
 	}
 

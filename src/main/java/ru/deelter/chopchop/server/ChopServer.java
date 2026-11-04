@@ -68,6 +68,7 @@ public final class ChopServer {
 	 */
 	private static final Set<UUID> PLAYERS = new HashSet<>();
 	private static final java.util.random.RandomGenerator RANDOM = new Random();
+	private static final Map<UUID, Long> LAST_KICK = new HashMap<>();
 	/**
 	 * the last aim each player sent, for the attack that follows it in the same tick
 	 */
@@ -208,6 +209,18 @@ public final class ChopServer {
 
 		ServerPlayNetworking.registerGlobalReceiver(ChopPayload.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
+			// a player with no arms digs with a leg: the others see it kick, at most a few times a second
+			int leg = Protocol.readLimb(payload.data());
+			if (leg >= 0) {
+				long now = player.level().getGameTime();
+				Long last = LAST_KICK.get(player.getUUID());
+				if (MODDED.contains(player.getUUID()) && (last == null || now - last >= 4)) {
+					LAST_KICK.put(player.getUUID(), now);
+					byte[] kick = Protocol.limb(player.getId(), leg);
+					for (ServerPlayer other : PlayerLookup.tracking(player)) if (MODDED.contains(other.getUUID())) send(other, kick);
+				}
+				return;
+			}
 			Protocol.Aim cut = Protocol.readCut(payload.data());
 			if (cut != null) {
 				if (MODDED.contains(player.getUUID())) cutCorpse(player, cut);
@@ -228,6 +241,7 @@ public final class ChopServer {
 			MODDED.remove(handler.getPlayer().getUUID());
 			AIMS.remove(handler.getPlayer().getUUID());
 			LAST_CUT.remove(handler.getPlayer().getUUID());
+			LAST_KICK.remove(handler.getPlayer().getUUID());
 		});
 
 		EntityTrackingEvents.START_TRACKING.register((entity, player) -> {

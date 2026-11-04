@@ -114,6 +114,10 @@ public final class WoundRules {
 	 */
 	private double crawlSpeed = 0.35;
 	/**
+	 * speed of a body with a leg cut off, a share of its usual speed: 0.85 is like Slowness I. 1 turns it off
+	 */
+	private double limpSpeed = 0.85;
+	/**
 	 * What a mob without legs does: "lie" (lies still with its AI off, only its head follows the nearest player) or
 	 * "crawl" (keeps after its target at {@link #crawlSpeed}). Players always crawl in the vanilla pose
 	 */

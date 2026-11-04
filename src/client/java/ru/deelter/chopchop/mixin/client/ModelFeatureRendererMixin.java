@@ -35,6 +35,8 @@ public abstract class ModelFeatureRendererMixin {
 				// a dead body lets its arms down, a zombie's too: on its back they would stick up, face down into the ground.
 				// Every model of it (the body, armour, layers) is posed the same way, they all go through here
 				if (state.chopchop$corpse() != null) Corpse.pose(model, state.chopchop$corpse());
+				// a leg kicking at a block, for a player with no arms: every model of it, armour too
+				Kicks.pose(model, state.chopchop$entityId());
 				if (model == state.chopchop$mainModel()) {
 					// the pose as drawn, for the crosshair (ModelPick): a swinging arm is hit where it is
 					AnimatedPose.capture(model, state.chopchop$entityId(),

@@ -46,6 +46,10 @@ public final class ClientConfig {
 	 * the bones of a vanilla skeleton inside humanoid bodies: a deep wound shows the skull, the ribs, the spine
 	 */
 	private boolean skeletonInside = true;
+	/**
+	 * a hand that is gone uses nothing, a leg that is gone does not sprint, digging takes whatever limb is left
+	 */
+	private boolean limbRules = true;
 	private boolean firstPerson = true;
 	private boolean hideItems = true;
 	private int maxDistance = 64;

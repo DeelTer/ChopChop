@@ -74,6 +74,8 @@ public final class ChopChopClient implements ClientModInitializer {
 			HeadCam.tick(client);
 			KillCam.tick(client);
 			ru.deelter.chopchop.client.render.DeathCam.tick(client);
+			Limbs.tick(client);
+			ru.deelter.chopchop.client.render.Kicks.tick();
 		});
 		LevelRenderEvents.COLLECT_SUBMITS.register(Debris::submit);
 		LevelRenderEvents.COLLECT_SUBMITS.register(Corpses::submit);
@@ -129,6 +131,10 @@ public final class ChopChopClient implements ClientModInitializer {
 				}
 			}
 			case Protocol.Message.Clear clear -> ClientWounds.clear(clear.entityId());
+			// another player with no arms left digs with a leg
+			case Protocol.Message.Limb limb -> {
+				ru.deelter.chopchop.client.render.Kicks.start(limb.entityId(), limb.leg());
+			}
 			case Protocol.Message.Corpse corpse -> Corpses.add(corpse);
 			case Protocol.Message.Event event -> {
 				boolean cut = event.kind() == Protocol.EVENT_SEVER || event.kind() == Protocol.EVENT_BLAST;
