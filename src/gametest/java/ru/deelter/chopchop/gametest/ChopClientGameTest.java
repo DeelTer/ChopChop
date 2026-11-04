@@ -74,7 +74,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 						player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
 						player.teleportTo(player.level(), base.x + x, base.y, base.z, java.util.Set.of(), aim[0], aim[1], true);
 						player.resetAttackStrengthTicker();
-						living.invulnerableTime = 0;
+						ru.deelter.chopchop.version.Entities.clearInvulnerability(living);
 						player.attack(target);
 					});
 					context.waitTicks(3);
@@ -92,7 +92,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			for (int i = 0; i < 4; i++) {
 				world.getServer().runOnServer(server -> {
 					ServerPlayer player = player(server);
-					player.invulnerableTime = 0;
+					ru.deelter.chopchop.version.Entities.clearInvulnerability(player);
 					Arrow arrow = new Arrow(EntityTypes.ARROW, player.level());
 					// facing south, the right arm is to the west (-x); shot from the north, behind the player. The
 					// arrow is where it would be in the tick it hits, and hurts through the arrow damage source
@@ -179,7 +179,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 				player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_AXE));
 				player.teleportTo(player.level(), base.x + COLUMNS[0], base.y, base.z, java.util.Set.of(), yaw, 50, true);
 				player.resetAttackStrengthTicker();
-				living.invulnerableTime = 0;
+				ru.deelter.chopchop.version.Entities.clearInvulnerability(living);
 				player.attack(target);
 			});
 			context.waitTicks(3);
@@ -210,7 +210,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			player.setYRot((float) Math.toDegrees(Math.atan2(-dx, dz)));
 			player.setXRot((float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz))));
 			player.resetAttackStrengthTicker();
-			target.invulnerableTime = 0;
+			ru.deelter.chopchop.version.Entities.clearInvulnerability(target);
 			player.attack(target);
 		});
 		context.waitTicks(6);
@@ -258,7 +258,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 				player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
 				player.teleportTo(player.level(), at.x, at.y, at.z, java.util.Set.of(), 0, -2, true);
 				player.resetAttackStrengthTicker();
-				living.invulnerableTime = 0;
+				ru.deelter.chopchop.version.Entities.clearInvulnerability(living);
 				player.attack(target);
 			});
 			context.waitTicks(4);
@@ -350,7 +350,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 				player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
 				player.teleportTo(player.level(), base.x + 8, base.y, base.z, java.util.Set.of(), 0, -2, true);
 				player.resetAttackStrengthTicker();
-				living.invulnerableTime = 0;
+				ru.deelter.chopchop.version.Entities.clearInvulnerability(living);
 				player.attack(target);
 			});
 			context.waitTicks(4);
@@ -392,7 +392,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 				zombie.setYRot(yaw);
 				zombie.setYHeadRot(yaw);
 				zombie.setXRot(pitch);
-				player.invulnerableTime = 0;
+				ru.deelter.chopchop.version.Entities.clearInvulnerability(player);
 				player.hurtServer(player.level(), player.level().damageSources().mobAttack(zombie), 2);
 			});
 			context.waitTicks(4);

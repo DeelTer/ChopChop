@@ -187,7 +187,7 @@ public final class ModelPick {
 		}
 		if (!net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(ChopPayload.TYPE)) return false;
 		// the swing is seen at once; blows faster than a sword swings are not sent
-		minecraft.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+		ru.deelter.chopchop.client.version.ClientSwings.swing(minecraft.player);
 		long now = System.nanoTime();
 		if (now - lastCutNanos < CUT_NANOS) return true;
 		lastCutNanos = now;

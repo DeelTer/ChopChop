@@ -117,7 +117,7 @@ public final class ChopServer {
 		if (hit == null) return;
 		LAST_CUT.put(player.getUUID(), now);
 		// the others see the swing; the player swung already on its own client
-		player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, false);
+		ru.deelter.chopchop.version.Swings.swingForOthers(player);
 		float damage = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
 		var weapon = FabricHits.classify(player.getMainHandItem());
 		for (byte[] message : book.hitCorpse(cut.entityId(), corpse.state(), hit, weapon, damage, rules)) {

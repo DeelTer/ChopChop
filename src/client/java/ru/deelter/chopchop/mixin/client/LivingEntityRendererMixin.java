@@ -98,9 +98,9 @@ public abstract class LivingEntityRendererMixin {
 		// about up x fall: the top goes the way of the fall
 		org.joml.Vector3f axis = new org.joml.Vector3f(lz, 0, -lx);
 		if (axis.lengthSquared() < 1e-6F) axis.set(1, 0, 0);
-		poseStack.mulPose(new org.joml.Quaternionf().rotationAxis(angle, axis.normalize()));
+		poseStack.rotateAround(new org.joml.Quaternionf().rotationAxis(angle, axis.normalize()), 0, 0, 0);
 		// lying, it rolls a little onto a side
-		poseStack.mulPose(new org.joml.Quaternionf().rotationY(roll * lying));
+		poseStack.rotateAround(new org.joml.Quaternionf().rotationY(roll * lying), 0, 0, 0);
 	}
 
 	@Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",

@@ -23,6 +23,8 @@ sourceSets {
         java {
             // wound rules, body profiles and protocol: the same source the Paper plugin is built with
             srcDir 'src/shared/java'
+            // the few server calls that differ between Minecraft versions, one folder per version
+            srcDir "src/main/java-${project.mc}"
         }
         resources {
             srcDir 'src/shared/resources'
@@ -172,5 +174,12 @@ if (project.hasProperty("paperPort")) {
     loom.runs.matching { it.name == "clientGameTest" }.configureEach {
         vmArg "-Dchopchop.paperPort=${project.paperPort}"
         vmArg "-Dchopchop.paperConsole=${file(project.paperConsole).absolutePath}"
+    }
+}
+
+// gradlew build with no -Pmc builds for every version: this one here, the others one after the other
+if (!gradle.startParameter.projectProperties.containsKey('mc')) {
+    tasks.named('build') {
+        dependsOn versionBuilds.findAll { it.name != "build_${project.mc.replace('.', '_')}" }
     }
 }
