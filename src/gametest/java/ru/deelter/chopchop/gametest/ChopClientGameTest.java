@@ -500,6 +500,8 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			ServerPlayer player = player(server);
 			player.teleportTo(player.level(), base.x, base.y, base.z - 8, java.util.Set.of(), 0, 0, true);
 			player.setYBodyRot(0);
+			// a player keeps the head above 30% of health: this one is near the end
+			player.setHealth(5);
 			int id = spawn(player.level(), EntityTypes.ZOMBIE, base.add(0, 0, -6.6));
 			((Mob) player.level().getEntity(id)).setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
 			return id;

@@ -76,7 +76,10 @@ public final class HeadCam {
 			stop();
 			return;
 		}
-		if (heldDeathScreen != null && ticks >= ClientConfig.get().getHeadCamSeconds() * 20) release();
+		// the player may cut it short: a click or a jump brings the death screen at once
+		boolean skip = ticks > 10 && (minecraft.options.keyAttack.isDown() || minecraft.options.keyUse.isDown()
+				|| minecraft.options.keyJump.isDown());
+		if (heldDeathScreen != null && (skip || ticks >= ClientConfig.get().getHeadCamSeconds() * 20)) release();
 	}
 
 	/**
@@ -101,6 +104,11 @@ public final class HeadCam {
 		releasing = true;
 		try {
 			minecraft.gui.setScreen(screen);
+			// the head cam was the wait: the buttons work at once
+			if (screen instanceof ru.deelter.chopchop.mixin.client.DeathScreenAccessor death) {
+				death.chopchop$setDelayTicker(20);
+				death.chopchop$setButtonsActive(true);
+			}
 		} finally {
 			releasing = false;
 		}

@@ -79,6 +79,11 @@ public final class WoundRules {
 	 */
 	private double lethalHeadChance = 0.45;
 	/**
+	 * a player keeps the head while more than this share of health is left after a blow (0.3: only below 30%);
+	 * the killing blow takes it anyway. 0 turns it off. Mobs are not guarded
+	 */
+	private double playerHeadHealth = 0.3;
+	/**
 	 * A chop at the head counts as {@code 1 + damage / headHitDamage} chops: a heavy weapon takes the head in fewer
 	 * blows. 0 counts every chop as one
 	 */

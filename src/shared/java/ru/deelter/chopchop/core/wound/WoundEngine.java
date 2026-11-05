@@ -36,6 +36,15 @@ public final class WoundEngine {
 	 */
 	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, int sharpness,
 								WoundRules rules, RandomGenerator random) {
+		return apply(state, hit, weapon, damage, lethal, sharpness, false, rules, random);
+	}
+
+	/**
+	 * @param headGuarded the head stays on whatever the chops: a player with plenty of health left (see
+	 *                    {@code playerHeadHealth}). The chops still count, so the blow that brings it low may take it
+	 */
+	public static Outcome apply(WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal, int sharpness,
+								boolean headGuarded, WoundRules rules, RandomGenerator random) {
 		double sharp = weapon.edged() ? Math.max(0, sharpness) * rules.getSharpnessSeverBonus() : 0;
 		PartState part = state.part(hit.part());
 		BodyPart def = part.getPart();
@@ -81,6 +90,7 @@ public final class WoundEngine {
 					// the killing blow does not wait for the limb to wear through
 					if (!off && lethal) off = random.nextDouble() < Math.min(0.95, rules.getLethalSeverChance() * Math.min(1.5, weaponRule.sever()) * (1 + sharp));
 				}
+				if (off && headGuarded && def.isHead()) off = false;
 				if (off && part.sever(seg.getCut())) severedAt = seg.getCut();
 			}
 		}

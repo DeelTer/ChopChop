@@ -325,10 +325,13 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 				threats = PaperConsequences.threats(killer, target, rules);
 				if (!threats.isEmpty() && "skip".equalsIgnoreCase(rules.getKillCamThreats())) attacker = -1;
 			}
+			// a player loses the head only near the end: hearts still mean something
+			boolean headGuarded = target instanceof Player && !target.isDead()
+					&& health(target) > target.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue() * rules.getPlayerHeadHealth();
 			List<byte[]> messages = p.blast != null
 					? book.blast(target.getUniqueId(), target.getEntityId(), state, p.blast, lost, blastHead(target, state, p.from), rules)
 					: book.hit(target.getUniqueId(), target.getEntityId(), state, p.hit, p.weapon,
-					target.isDead() ? (float) Math.max(lost, Math.min(40, p.dealt)) : lost, target.isDead(), p.sharpness, rules, attacker);
+					target.isDead() ? (float) Math.max(lost, Math.min(40, p.dealt)) : lost, target.isDead(), p.sharpness, headGuarded, rules, attacker);
 			for (byte[] message : messages) broadcast(target, message);
 			if (!wasHeadless && state.headless() && attacker >= 0 && p.blast == null && "freeze".equalsIgnoreCase(rules.getKillCamThreats())) {
 				consequences.freeze(threats, rules);

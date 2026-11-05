@@ -67,7 +67,15 @@ public final class WoundBook {
 	 */
 	public List<byte[]> hit(UUID id, int entityId, WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal,
 							 int sharpness, WoundRules rules, int attacker) {
-		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, damage, lethal, sharpness, rules, random);
+		return hit(id, entityId, state, hit, weapon, damage, lethal, sharpness, false, rules, attacker);
+	}
+
+	/**
+	 * @param headGuarded the head stays on: a player with plenty of health left
+	 */
+	public List<byte[]> hit(UUID id, int entityId, WoundState state, Hit hit, WeaponKind weapon, float damage, boolean lethal,
+							 int sharpness, boolean headGuarded, WoundRules rules, int attacker) {
+		WoundEngine.Outcome outcome = WoundEngine.apply(state, hit, weapon, damage, lethal, sharpness, headGuarded, rules, random);
 		List<byte[]> messages = new ArrayList<>(2);
 		if (!outcome.changed()) {
 			messages.add(Protocol.event(entityId, Protocol.EVENT_SPLASH, hit.part(), hit.model(), -1, attacker));

@@ -251,6 +251,30 @@ public final class GoreRender {
 	}
 
 	/**
+	 * The voxel of the part a whole part was cut off from, where that part sat on it, is gone too: the body was
+	 * cleaved down the middle or cut in two at the waist, and the stump went with the half that fell.
+	 */
+	private static boolean socketGone(WoundState wounds, BodyPart part) {
+		BodyProfile profile = wounds.getProfile();
+		BodyPart parent = part.getParent() != null ? profile.part(part.getParent()) : part.getName().equals("body") ? null : profile.part("body");
+		if (parent == null || parent == part || parent.getIndex() >= wounds.partCount()) return false;
+		PartState on = wounds.part(parent.getIndex());
+		if (on.pristine()) return false;
+		// where the part sat: the middle of its first row, the one at the joint
+		var at = ru.deelter.chopchop.core.hit.HitLocator.voxelCenter(profile, part, part.gx() / 2, 0, part.gz() / 2);
+		double best = Double.MAX_VALUE;
+		boolean gone = false;
+		for (int x = 0; x < parent.gx(); x++) for (int y = 0; y < parent.gy(); y++) for (int z = 0; z < parent.gz(); z++) {
+			double d = ru.deelter.chopchop.core.hit.HitLocator.voxelCenter(profile, parent, x, y, z).distanceSquared(at);
+			if (d < best) {
+				best = d;
+				gone = on.gone(x, y, z);
+			}
+		}
+		return gone;
+	}
+
+	/**
 	 * The inside of a part: meat (or bone, or goo) wherever it is open, and at a stump its bone.
 	 */
 	private static void inside(WoundState wounds, BodyPart part, PartState partState, VoxelMesher.Grid grid, VoxelMask mask, PoseStack.Pose pose) {
@@ -260,7 +284,9 @@ public final class GoreRender {
 			VoxelMesher.inside(grid, mask, material, pose, inside, part.getSkeleton(), skeletonTexture, SKELETON_QUADS);
 			// boneScale 0: a body without bones (a spider, a slime), its stumps are meat only
 			boolean bone = Material.bleeds(material) && ClientConfig.get().isBones() && part.getBoneScale() > 0;
-			if (partState.getSeveredAt() == 0) {
+			if (partState.getSeveredAt() == 0 && socketGone(wounds, part)) {
+				// the part it sat on went with it (a body cleaved or cut in two): no stump left in the air
+			} else if (partState.getSeveredAt() == 0) {
 				// the whole part is off, a head: the stump is where it sat, a neck of meat with the bone standing out
 				VoxelMesher.neck(grid, grid.gy(), false, pose, inside);
 				// one bone at a neck, on the body: the spine of the skeleton inside if there is one (the middle column

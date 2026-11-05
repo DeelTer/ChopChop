@@ -387,8 +387,10 @@ public final class ChopServer {
 		}
 		boolean lethal = target.isDeadOrDying();
 		float damage = lethal ? Math.max(lost, dealt) : lost;
+		// a player loses the head only near the end: hearts still mean something
+		boolean headGuarded = player && !lethal && target.getHealth() > target.getMaxHealth() * rules.getPlayerHeadHealth();
 		List<byte[]> messages = book.hit(target.getUUID(), target.getId(), state, hit, resolved.weapon(), damage, lethal,
-				resolved.sharpness(), rules, attacker);
+				resolved.sharpness(), headGuarded, rules, attacker);
 		if (player && book.get(target.getUUID()) != null) PLAYERS.add(target.getUUID());
 		for (byte[] message : messages) broadcast(target, message);
 		Consequences.apply(target, source, state, wasLegless, wasHeadless, rules);
