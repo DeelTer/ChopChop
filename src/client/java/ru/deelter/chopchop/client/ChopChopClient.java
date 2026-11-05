@@ -130,7 +130,12 @@ public final class ChopChopClient implements ClientModInitializer {
 					ClientWounds.put(state.entityId(), state.state());
 				}
 			}
-			case Protocol.Message.Clear clear -> ClientWounds.clear(clear.entityId());
+			case Protocol.Message.Clear clear -> {
+				ClientWounds.clear(clear.entityId());
+				// a body that goes by this id goes too (a replay plugin clearing the bodies of its figures);
+				// a respawned player's body has an id of its own, so a heal never takes a body away
+				Corpses.forget(clear.entityId());
+			}
 			// another player with no arms left digs with a leg
 			case Protocol.Message.Limb limb -> {
 				ru.deelter.chopchop.client.render.Kicks.start(limb.entityId(), limb.leg());

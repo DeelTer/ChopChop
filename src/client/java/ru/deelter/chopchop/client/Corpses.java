@@ -660,6 +660,11 @@ public final class Corpses {
 	/**
 	 * Lets a body go: out of the client world if the server is done with it.
 	 */
+	/** The body that goes by this id is gone at once (the server cleared it). */
+	public static void forget(int entityId) {
+		if (BODIES.containsKey(entityId)) release(entityId);
+	}
+
 	private static void release(int entityId) {
 		Body body = BODIES.remove(entityId);
 		if (body == null) return;
