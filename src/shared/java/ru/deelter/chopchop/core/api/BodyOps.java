@@ -148,6 +148,28 @@ public final class BodyOps {
 	}
 
 	/**
+	 * Cuts a body in two from the top of the head down between the legs: the right halves of the head and the trunk
+	 * and the whole right arm and leg ("right_*" parts) come off, the left side stays. The cut runs along the
+	 * body's own left-right axis, whatever way the blow came.
+	 *
+	 * @return the messages for the clients, empty if nothing came off (no part named "body" or "head")
+	 */
+	public static List<byte[]> split(WoundBook book, UUID id, int entityId, WoundState state, boolean fling, int attacker) {
+		List<byte[]> messages = new ArrayList<>();
+		BodyProfile profile = state.getProfile();
+		BodyPart body = profile.part("body"), head = profile.part("head");
+		if (body == null || head == null) return messages;
+		// the model's x runs from the right side of the body to the left: the low half is the right one
+		for (BodyPart part : new BodyPart[]{head, body}) {
+			messages.addAll(book.split(id, entityId, state, part.getIndex(), (part.gx() + 1) / 2, fling, attacker));
+		}
+		for (int i = 0; i < profile.getParts().size(); i++) {
+			if (profile.part(i).getName().startsWith("right_")) messages.addAll(book.sever(id, entityId, state, i, 0, null, fling, attacker));
+		}
+		return messages;
+	}
+
+	/**
 	 * A wound at a spot: a round hole, or with a swing direction a cut along it.
 	 *
 	 * @param swing  the way the blade moved, in the world; null for a hole

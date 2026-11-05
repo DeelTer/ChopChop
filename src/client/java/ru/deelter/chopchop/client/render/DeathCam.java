@@ -82,10 +82,9 @@ public final class DeathCam {
 		float t = ticks + partial;
 		float around = azimuth + t * ORBIT_SPEED;
 		Vec3 wanted = body.add(Math.sin(around) * DISTANCE, HEIGHT, Math.cos(around) * DISTANCE);
-		BlockHitResult wall = minecraft.level.clip(new ClipContext(body, wanted, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, minecraft.player));
-		if (wall.getType() != HitResult.Type.MISS) {
-			wanted = wall.getLocation().add(body.subtract(wall.getLocation()).normalize().scale(0.3));
-		}
+		// a body lies on the ground, often a little in it: the rays start above it, where the air is
+		Vec3 anchor = clear(minecraft, body, body.add(0, 0.8, 0));
+		wanted = clear(minecraft, anchor, wanted);
 		long now = System.nanoTime();
 		double dt = camera == null ? 0 : Math.min(0.1, (now - lastNanos) / 1.0E9);
 		lastNanos = now;
@@ -94,10 +93,22 @@ public final class DeathCam {
 		// out of the eyes, eased
 		float in = Mth.clamp(t / BLEND_IN_TICKS, 0, 1);
 		float k = in * in * (3 - 2 * in);
-		Vec3 position = eye.lerp(camera, k);
+		// the way from the eyes may cut through the ground: a camera in a block shows the world inside out
+		Vec3 position = clear(minecraft, anchor, eye.lerp(camera, k));
 		Vec3 look = body.subtract(position);
 		float lookYaw = (float) Math.atan2(-look.x, look.z) * Mth.RAD_TO_DEG;
 		float lookPitch = (float) -Math.atan2(look.y, Math.sqrt(look.x * look.x + look.z * look.z)) * Mth.RAD_TO_DEG;
 		return new HeadCam.View(position, Mth.rotLerp(k, yaw, lookYaw), Mth.lerp(k, pitch, lookPitch));
+	}
+
+	/**
+	 * The point on the way from {@code from} to {@code to} short of the first block, a little away from it.
+	 */
+	private static Vec3 clear(Minecraft minecraft, Vec3 from, Vec3 to) {
+		BlockHitResult wall = minecraft.level.clip(new ClipContext(from, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, minecraft.player));
+		if (wall.getType() == HitResult.Type.MISS) return to;
+		Vec3 back = from.subtract(wall.getLocation());
+		double length = back.length();
+		return length < 1e-4 ? from : wall.getLocation().add(back.scale(Math.min(0.3, length) / length));
 	}
 }

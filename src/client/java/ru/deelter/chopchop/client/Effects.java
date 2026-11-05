@@ -67,7 +67,7 @@ public final class Effects {
 		if (config.isParticles() && config.getParticleAmount() > 0) {
 			int base = switch (event.kind()) {
 				case Protocol.EVENT_SEVER -> 22;
-				case Protocol.EVENT_BLAST -> 34;
+				case Protocol.EVENT_BLAST, Protocol.EVENT_SPLIT -> 34;
 				case Protocol.EVENT_WOUND -> 9;
 				default -> 3;
 			};
@@ -76,7 +76,7 @@ public final class Effects {
 			for (int i = 0; i < count; i++) {
 				boolean dark = random.nextInt(3) == 0;
 				DustParticleOptions dust = Material.goo(material) ? (dark ? GOO_DARK : GOO) : bleeds ? (dark ? BLOOD_DARK : BLOOD) : BONE_DUST;
-				double speed = event.kind() == Protocol.EVENT_BLAST ? 0.4 : event.kind() == Protocol.EVENT_SEVER ? 0.25 : 0.12;
+				double speed = event.kind() == Protocol.EVENT_BLAST || event.kind() == Protocol.EVENT_SPLIT ? 0.4 : event.kind() == Protocol.EVENT_SEVER ? 0.25 : 0.12;
 				level.addParticle(dust, at.x, at.y, at.z,
 						random.nextGaussian() * speed, random.nextDouble() * speed + 0.05, random.nextGaussian() * speed);
 			}
@@ -88,7 +88,7 @@ public final class Effects {
 			float volume = (float) config.getSoundVolume();
 			float pitch = 0.9F + level.getRandom().nextFloat() * 0.25F;
 			switch (event.kind()) {
-				case Protocol.EVENT_SEVER -> level.playLocalSound(at.x, at.y, at.z, SEVER, living.getSoundSource(), volume, pitch, false);
+				case Protocol.EVENT_SEVER, Protocol.EVENT_SPLIT -> level.playLocalSound(at.x, at.y, at.z, SEVER, living.getSoundSource(), volume, pitch, false);
 				case Protocol.EVENT_BLAST -> level.playLocalSound(at.x, at.y, at.z, SEVER, living.getSoundSource(), volume, pitch - 0.15F, false);
 				case Protocol.EVENT_WOUND -> level.playLocalSound(at.x, at.y, at.z, CHOP, living.getSoundSource(), volume * 0.8F, pitch, false);
 				default -> level.playLocalSound(at.x, at.y, at.z, CHOP, living.getSoundSource(), volume * 0.35F, pitch + 0.15F, false);

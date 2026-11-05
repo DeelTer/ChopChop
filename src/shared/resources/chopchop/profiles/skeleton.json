@@ -7,7 +7,7 @@
   "parts": [
     {"name": "head", "pivot": [0, 0, 0], "box": [-4, -8, -4, 4, 0, 4], "overlays": ["hat"], "boneScale": 0.45,
       "segments": [{"name": "neck", "cut": 0, "hits": 3}]},
-    {"name": "body", "pivot": [0, 0, 0], "box": [-4, 0, -2, 4, 12, 2], "overlays": ["jacket"]},
+    {"name": "body", "pivot": [0, 0, 0], "box": [-4, 0, -2, 4, 12, 2], "overlays": ["jacket"], "woundable": false},
     {"name": "right_arm", "pivot": [-5, 2, 0], "box": [-1, -2, -1, 1, 10, 1], "hand": "right", "boneScale": 0.22,
       "segments": [{"name": "upper", "cut": 3, "durability": 8}, {"name": "lower", "cut": 7, "durability": 5}]},
     {"name": "left_arm", "pivot": [5, 2, 0], "box": [-1, -2, -1, 1, 10, 1], "hand": "left", "boneScale": 0.22,

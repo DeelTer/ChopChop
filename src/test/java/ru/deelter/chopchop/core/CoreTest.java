@@ -590,6 +590,25 @@ class CoreTest {
 	}
 
 	@Test
+	void splittingTakesTheRightHalf() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(1));
+		UUID id = UUID.randomUUID();
+		WoundState state = book.getOrBlank(id, profile);
+		assertFalse(ru.deelter.chopchop.core.api.BodyOps.split(book, id, 1, state, false, -1).isEmpty());
+		PartState body = state.part(profile.part("body").getIndex());
+		PartState head = state.part(profile.part("head").getIndex());
+		// x 0..3 (the right side) gone, 4..7 left
+		assertTrue(body.gone(0, 5, 1) && body.gone(3, 5, 1));
+		assertFalse(body.gone(4, 5, 1) || body.gone(7, 5, 1));
+		assertTrue(head.gone(3, 4, 4) && !head.gone(4, 4, 4));
+		assertEquals(0, state.part(profile.part("right_arm").getIndex()).getSeveredAt());
+		assertEquals(0, state.part(profile.part("right_leg").getIndex()).getSeveredAt());
+		assertFalse(state.part(profile.part("left_leg").getIndex()).severed());
+		assertTrue(ru.deelter.chopchop.core.api.BodyOps.split(book, id, 1, state, false, -1).isEmpty());
+	}
+
+	@Test
 	void clientAimIsTakenOnlyWhenPlausible() {
 		BodyProfile profile = PROFILES.byId("zombie");
 		WoundState state = new WoundState(profile);

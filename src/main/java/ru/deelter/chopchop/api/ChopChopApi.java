@@ -190,6 +190,26 @@ public final class ChopChopApi {
 	}
 
 	/**
+	 * A fatality: cuts the body in two from the top of the head down, along its own left-right axis (an overhead
+	 * blow). The right halves of the head and the trunk and the whole right arm and leg fall off, the left half
+	 * stays as the body. The entity dies, the kill going to the attacker.
+	 *
+	 * @param fling the right half is thrown hard to its side
+	 * @return whether the body was cut (false without a profile with parts named "head" and "body")
+	 */
+	public static boolean split(LivingEntity target, @Nullable Entity attacker, boolean fling) {
+		WoundState state = state(target);
+		if (state == null || ChopServer.book() == null) return false;
+		boolean wasLegless = state.legless(), wasHeadless = state.headless();
+		var messages = BodyOps.split(ChopServer.book(), target.getUUID(), target.getId(), state, fling, attacker == null ? -1 : attacker.getId());
+		if (!send(target, state, messages, attacker, wasLegless, wasHeadless)) return false;
+		if (target.isAlive() && target.level() instanceof net.minecraft.server.level.ServerLevel level) {
+			ChopServer.finish(target, level, source(target, attacker));
+		}
+		return true;
+	}
+
+	/**
 	 * Cuts the part of a spot off where the spot is.
 	 */
 	public static boolean sever(LivingEntity target, BodySpot spot, @Nullable Entity attacker, boolean fling) {

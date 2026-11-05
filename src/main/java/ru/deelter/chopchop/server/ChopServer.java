@@ -167,7 +167,27 @@ public final class ChopServer {
 	/**
 	 * Forgets bodies whose time on every client is up.
 	 */
+	/**
+	 * Bodies whose wounds are taken again a moment after the death: what the killing blow cut off after it killed (a
+	 * combat mod hurts first, then severs) belongs to the body too, unless the body was cut in between.
+	 */
+	private record Recopy(int corpseId, Corpse first, int revision, java.util.UUID entity, BodyProfile profile, int due) {
+	}
+
+	private static final List<Recopy> RECOPIES = new ArrayList<>();
+
 	private static void tickCorpses(MinecraftServer server) {
+		if (!RECOPIES.isEmpty()) {
+			for (java.util.Iterator<Recopy> it = RECOPIES.iterator(); it.hasNext(); ) {
+				Recopy r = it.next();
+				if (server.getTickCount() < r.due()) continue;
+				it.remove();
+				WoundState now = book == null ? null : book.get(r.entity());
+				if (now != null && CORPSES.get(r.corpseId()) == r.first() && r.first().state().getRevision() == r.revision()) {
+					CORPSES.put(r.corpseId(), new Corpse(r.first().level(), r.first().at(), book.copyOf(now, r.profile()), r.first().until()));
+				}
+			}
+		}
 		if (CORPSES.isEmpty() || server.getTickCount() % 20 != 0) return;
 		CORPSES.values().removeIf(c -> c.until() < c.level().getGameTime());
 	}
@@ -402,8 +422,10 @@ public final class ChopServer {
 		BodyProfile profile = profiles.forEntity(BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString());
 		if (target.level() instanceof ServerLevel level) {
 			// clients keep a body three times its time at most, while someone looks at it
-			CORPSES.put(corpseId, new Corpse(level, target.position(), book.copyOf(book.get(target.getUUID()), profile),
-					level.getGameTime() + ticks * 3L));
+			Corpse first = new Corpse(level, target.position(), book.copyOf(book.get(target.getUUID()), profile),
+					level.getGameTime() + ticks * 3L);
+			CORPSES.put(corpseId, first);
+			RECOPIES.add(new Recopy(corpseId, first, first.state().getRevision(), target.getUUID(), profile, level.getServer().getTickCount() + 2));
 		}
 		byte[] message = Protocol.corpse(target.getId(), (float) push.x, (float) push.z, strength, RANDOM.nextInt(), ticks, corpseId);
 		broadcast(target, message);

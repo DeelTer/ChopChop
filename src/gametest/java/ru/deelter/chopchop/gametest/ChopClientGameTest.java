@@ -158,6 +158,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			crawl(context, world, base, ids.getFirst());
 			killCamSkippedUnderThreat(context, world, base);
 			killCam(context, world, base);
+			fatalities(context, world, base);
 			tnt(context, world, base);
 			blownUp(context, world, base);
 			ownCorpse(context, world, base);
@@ -426,6 +427,32 @@ public class ChopClientGameTest implements FabricClientGameTest {
 		System.out.println("[ChopChop gametest] tnt carved=" + summary[0] + " severed=" + summary[1]);
 		if (summary[0] <= 0) throw new AssertionError("TNT left no wounds");
 		if (summary[1] <= 0) throw new AssertionError("TNT right next to a zombie took no limb");
+	}
+
+	/**
+	 * The API fatalities: one zombie split from the head down, one cut in half at the waist.
+	 */
+	private static void fatalities(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
+		int[] ids = world.getServer().computeOnServer(server -> {
+			ServerPlayer player = player(server);
+			player.teleportTo(player.level(), base.x + 41.5, base.y, base.z - 3, java.util.Set.of(), 0, 10, true);
+			return new int[]{spawn(player.level(), EntityTypes.ZOMBIE, base.add(40, 0, 1)), spawn(player.level(), EntityTypes.ZOMBIE, base.add(43, 0, 1))};
+		});
+		context.waitTicks(10);
+		boolean[] done = world.getServer().computeOnServer(server -> {
+			ServerPlayer player = player(server);
+			LivingEntity a = (LivingEntity) player.level().getEntity(ids[0]);
+			LivingEntity b = (LivingEntity) player.level().getEntity(ids[1]);
+			return new boolean[]{ru.deelter.chopchop.api.ChopChopApi.split(a, player, false),
+					ru.deelter.chopchop.api.ChopChopApi.halve(b, player), a.isAlive(), b.isAlive()};
+		});
+		context.waitTicks(3);
+		context.takeScreenshot("chopchop-fatality-falling");
+		context.waitTicks(20);
+		context.takeScreenshot("chopchop-fatality-landed");
+		System.out.println("[ChopChop gametest] split=" + done[0] + " halve=" + done[1] + " alive=" + done[2] + "," + done[3]);
+		if (!done[0] || !done[1]) throw new AssertionError("A fatality cut nothing");
+		if (done[2] || done[3]) throw new AssertionError("A fatality left its target alive");
 	}
 
 	/**

@@ -30,8 +30,9 @@ public final class ClientWounds {
 	 * @param before the part as it was before the cut
 	 * @param flung  torn off by a blast: it flies away hard
 	 * @param away   where the blast met it, in the world: it flies away from there. Null: away from the body
+	 * @param column for a part cut in two along its length: voxels with x below it fall; -1 for a cut across
 	 */
-	public record Detach(int part, int cut, PartState before, long nanos, boolean flung, net.minecraft.world.phys.Vec3 away) {
+	public record Detach(int part, int cut, PartState before, long nanos, boolean flung, net.minecraft.world.phys.Vec3 away, int column) {
 	}
 
 	public static final class Entry {
@@ -74,7 +75,16 @@ public final class ClientWounds {
 		Entry entry = ENTRIES.computeIfAbsent(entityId, id -> new Entry());
 		// nothing known before the cut: the part was whole, and its profile comes with the state that follows
 		PartState before = entry.state != null && part < entry.state.partCount() ? entry.state.part(part).copy() : null;
-		entry.detaches.add(new Detach(part, cut, before, System.nanoTime(), flung, away));
+		entry.detaches.add(new Detach(part, cut, before, System.nanoTime(), flung, away, -1));
+	}
+
+	/**
+	 * Notes a part cut in two along its length: the voxels below {@code column} fall as one piece.
+	 */
+	public static void noteSplit(int entityId, int part, int column, boolean flung) {
+		Entry entry = ENTRIES.computeIfAbsent(entityId, id -> new Entry());
+		PartState before = entry.state != null && part < entry.state.partCount() ? entry.state.part(part).copy() : null;
+		entry.detaches.add(new Detach(part, -1, before, System.nanoTime(), flung, null, column));
 	}
 
 	/**

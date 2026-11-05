@@ -110,6 +110,17 @@ public final class ChopApiBridge {
 		return true;
 	}
 
+	public static boolean split(LivingEntity target, Entity attacker, boolean fling) {
+		WoundState state = state(target);
+		if (state == null) return false;
+		boolean wasLegless = state.legless(), wasHeadless = state.headless();
+		var messages = BodyOps.split(plugin().book(), target.getUniqueId(), target.getEntityId(), state, fling,
+				attacker == null ? -1 : attacker.getEntityId());
+		if (!send(target, state, messages, attacker, wasLegless, wasHeadless)) return false;
+		if (!target.isDead()) plugin().finishApi(target, attacker);
+		return true;
+	}
+
 	public static boolean wound(LivingEntity target, BodyOps.Spot spot, double[] swing, double length, double radius, int depth, Entity attacker) {
 		WoundState state = state(target);
 		if (state == null) return false;

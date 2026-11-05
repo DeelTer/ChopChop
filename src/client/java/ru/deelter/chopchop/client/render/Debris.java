@@ -193,7 +193,9 @@ public final class Debris {
 			BodyPart part = state.getProfile().part(detach.part());
 			PartState before = detach.before() != null ? detach.before() : new PartState(part);
 			int cut = detach.cut();
-			VoxelMask mask = (x, y, z) -> y < cut || before.gone(x, y, z);
+			int column = detach.column();
+			boolean split = column >= 0;
+			VoxelMask mask = split ? (x, y, z) -> x >= column || before.gone(x, y, z) : (x, y, z) -> y < cut || before.gone(x, y, z);
 			List<Piece> pieces = new ArrayList<>();
 			List<String> names = new ArrayList<>();
 			names.add(part.getName());
@@ -214,8 +216,8 @@ public final class Debris {
 			Piece first = pieces.getFirst();
 			VoxelMesher.Grid grid = VoxelMesher.Grid.of(first.cube(), first.binding(), part);
 			Vector3f center = first.world().transformPosition(new Vector3f(
-					(grid.ox() + grid.sx() * grid.gx() / 2F) / 16F,
-					(grid.oy() + grid.sy() * (cut + grid.gy()) / 2F) / 16F,
+					(grid.ox() + grid.sx() * (split ? column / 2F : grid.gx() / 2F)) / 16F,
+					(grid.oy() + grid.sy() * (split ? grid.gy() / 2F : (cut + grid.gy()) / 2F)) / 16F,
 					(grid.oz() + grid.sz() * grid.gz() / 2F) / 16F));
 			float size = first.world().getScale(new Vector3f()).x * Math.max(grid.sx() * grid.gx(), grid.sz() * grid.gz()) / 16F;
 			// the oldest piece goes first, never a head with a camera in it
@@ -227,7 +229,15 @@ public final class Debris {
 					}
 				}
 			}
-			Chunk chunk = new Chunk(skin, texture, part, mask, cut, pieces, center, entity, size, detach.flung(), detach.away(), level.getRandom());
+			Chunk chunk = new Chunk(skin, texture, part, mask, cut, pieces, center, entity, size, !split && detach.flung(), detach.away(), level.getRandom());
+			if (split) {
+				// a half falls away to its own side: the model's low x, out of the body
+				Vector3f side = first.world().transformDirection(new Vector3f(-1, 0, 0));
+				side.y = 0;
+				if (side.lengthSquared() > 1e-6F) side.normalize(detach.flung() ? 0.3F : 0.1F);
+				chunk.velocity.add(side.x, detach.flung() ? 0.15F : 0, side.z);
+				chunk.spin *= 0.5F;
+			}
 			if (ClientConfig.get().isSkeletonInside()) chunk.skeleton = SkeletonTexture.of(state.getProfile());
 			CHUNKS.add(chunk);
 			if (chunk.head && Minecraft.getInstance().player != null

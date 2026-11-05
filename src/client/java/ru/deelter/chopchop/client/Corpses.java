@@ -178,6 +178,17 @@ public final class Corpses {
 		}
 	}
 
+	/**
+	 * The copy drawn as the body of a player who died a moment ago (a second at most), or null: a cut the killing blow
+	 * made after it killed reaches the player's id and belongs to the body too.
+	 */
+	public static Integer freshCopyOf(int playerId) {
+		Integer copy = HIDDEN.get(playerId);
+		if (copy == null) return null;
+		Body body = BODIES.get(copy);
+		return body != null && body.age <= 20 ? copy : null;
+	}
+
 	public static void add(Protocol.Message.Corpse message) {
 		if (!ru.deelter.chopchop.client.config.ClientConfig.get().isCorpses()) return;
 		ClientLevel level = Minecraft.getInstance().level;
@@ -516,7 +527,7 @@ public final class Corpses {
 		Body body = get(entityId);
 		if (body == null) return;
 		float power = switch (kind) {
-			case Protocol.EVENT_SEVER, Protocol.EVENT_BLAST -> 0.55F;
+			case Protocol.EVENT_SEVER, Protocol.EVENT_BLAST, Protocol.EVENT_SPLIT -> 0.55F;
 			case Protocol.EVENT_WOUND -> 0.35F;
 			default -> 0.2F;
 		};

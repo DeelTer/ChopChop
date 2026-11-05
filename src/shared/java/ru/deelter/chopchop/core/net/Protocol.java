@@ -77,6 +77,12 @@ public final class Protocol {
 	 * a part torn off by a blast: it flies away hard
 	 */
 	public static final byte EVENT_BLAST = 3;
+	/**
+	 * a part cut in two along its length: every voxel with x below the column comes off as one piece. The column is
+	 * in {@code severedAt}, with {@link #SPLIT_FLUNG} set when the piece is thrown hard
+	 */
+	public static final byte EVENT_SPLIT = 4;
+	public static final int SPLIT_FLUNG = 0x100;
 
 	private Protocol() {
 	}

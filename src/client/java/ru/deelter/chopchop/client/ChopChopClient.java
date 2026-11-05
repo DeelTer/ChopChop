@@ -129,6 +129,14 @@ public final class ChopChopClient implements ClientModInitializer {
 				if (had == null || had.getProfile() != state.state().getProfile() || state.state().getRevision() >= had.getRevision()) {
 					ClientWounds.put(state.entityId(), state.state());
 				}
+				// a player cut right after he died: his body (a copy under its own id) takes the cut too
+				Integer copy = Corpses.freshCopyOf(state.entityId());
+				if (copy != null) {
+					WoundState body = ClientWounds.get(copy);
+					if (body == null || body.getProfile() == state.state().getProfile() && state.state().getRevision() >= body.getRevision()) {
+						ClientWounds.put(copy, state.state());
+					}
+				}
 			}
 			case Protocol.Message.Clear clear -> {
 				ClientWounds.clear(clear.entityId());
@@ -142,6 +150,10 @@ public final class ChopChopClient implements ClientModInitializer {
 			}
 			case Protocol.Message.Corpse corpse -> Corpses.add(corpse);
 			case Protocol.Message.Event event -> {
+				if (event.kind() == Protocol.EVENT_SPLIT && ClientConfig.get().isDebris()) {
+					ClientWounds.noteSplit(event.entityId(), event.part(), event.severedAt() & 0xFF,
+							(event.severedAt() & Protocol.SPLIT_FLUNG) != 0);
+				}
 				boolean cut = event.kind() == Protocol.EVENT_SEVER || event.kind() == Protocol.EVENT_BLAST;
 				if (cut && event.severedAt() >= 0 && ClientConfig.get().isDebris()) {
 					boolean blast = event.kind() == Protocol.EVENT_BLAST;

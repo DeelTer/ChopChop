@@ -222,6 +222,34 @@ public final class WoundBook {
 	}
 
 	/**
+	 * Cuts a part in two along its length: every voxel with x below {@code column} is carved out, and the clients see
+	 * it fall off as one piece.
+	 *
+	 * @return the messages for the clients, empty if nothing was left there to cut
+	 */
+	public List<byte[]> split(UUID id, int entityId, WoundState state, int part, int column, boolean flung, int attacker) {
+		List<byte[]> messages = new ArrayList<>(2);
+		if (part < 0 || part >= state.partCount()) return messages;
+		var p = state.part(part);
+		var def = p.getPart();
+		column = Math.clamp(column, 1, def.gx());
+		boolean any = false;
+		for (int x = 0; x < column; x++) for (int y = 0; y < def.gy(); y++) for (int z = 0; z < def.gz(); z++) {
+			if (p.gone(x, y, z)) continue;
+			p.carve(x, y, z);
+			any = true;
+		}
+		if (!any) return messages;
+		state.touch();
+		states.put(id, state);
+		var center = ru.deelter.chopchop.core.hit.HitLocator.voxelCenter(state.getProfile(), def, Math.max(0, column - 1), def.gy() / 2, def.gz() / 2);
+		float[] point = {(float) center.x, (float) center.y, (float) center.z};
+		messages.add(Protocol.event(entityId, Protocol.EVENT_SPLIT, part, point, column | (flung ? Protocol.SPLIT_FLUNG : 0), attacker));
+		messages.add(Protocol.state(entityId, state));
+		return messages;
+	}
+
+	/**
 	 * Carves a wound at a hit, whatever the chance in the rules: for the API.
 	 *
 	 * @param slash      direction of a cut across the surface in voxels of the grid, null for a round hole

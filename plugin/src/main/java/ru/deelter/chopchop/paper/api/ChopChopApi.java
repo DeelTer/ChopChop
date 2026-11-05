@@ -139,6 +139,18 @@ public final class ChopChopApi {
 		return halve(target, 0.5, attacker, false);
 	}
 
+	/**
+	 * A fatality: cuts the body in two from the top of the head down, along its own left-right axis (an overhead
+	 * blow). The right halves of the head and the trunk and the whole right arm and leg fall off, the left half
+	 * stays as the body. The entity dies, the kill going to the attacker.
+	 *
+	 * @param fling the right half is thrown hard to its side
+	 * @return whether the body was cut (false without a profile with parts named "head" and "body")
+	 */
+	public static boolean split(LivingEntity target, @Nullable Entity attacker, boolean fling) {
+		return ChopApiBridge.split(target, attacker, fling);
+	}
+
 	public static boolean sever(LivingEntity target, BodySpot spot, @Nullable Entity attacker, boolean fling) {
 		return sever(target, spot.part(), spot.along(), attacker, fling);
 	}

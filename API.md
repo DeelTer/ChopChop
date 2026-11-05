@@ -169,6 +169,16 @@ part named `body`. The finishing blow makes no extra wounds of its own. As an op
 class that is loaded only when ChopChop is present (`FabricLoader.isModLoaded("chopchop")` /
 `isPluginEnabled("ChopChop")`).
 
+### Split from head to crotch (overhead blow)
+
+```java
+// right half of head and trunk + right arm and leg fall off; the left half is the body. Entity dies.
+ChopChopApi.split(target, attacker, false);   // true: the half is thrown hard to its side
+```
+
+The cut is in the target's own left-right plane, whatever way the blow came. Use `halve` for a sideways swing and
+`split` for a chop from above. Clients older than this version see the halves vanish instead of falling.
+
 ## Wounds without severing
 
 ```java
