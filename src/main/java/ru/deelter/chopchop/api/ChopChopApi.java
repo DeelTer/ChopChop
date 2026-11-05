@@ -166,6 +166,30 @@ public final class ChopChopApi {
 	}
 
 	/**
+	 * A fatality: cuts the body in two at the waist. The trunk is cut at {@code along} (0 neck, 1 hips, 0.5 the
+	 * middle) and both legs at the hips; the lower half falls off and the entity dies, the kill going to the
+	 * attacker. Meant for a finishing blow of a combat mod (a falling cleave, an execution).
+	 *
+	 * @param fling the lower half flies off hard, as from a blast
+	 * @return whether the body was cut (false without a profile or a part named "body")
+	 */
+	public static boolean halve(LivingEntity target, double along, @Nullable Entity attacker, boolean fling) {
+		WoundState state = state(target);
+		if (state == null || ChopServer.book() == null) return false;
+		boolean wasLegless = state.legless(), wasHeadless = state.headless();
+		var messages = BodyOps.halve(ChopServer.book(), target.getUUID(), target.getId(), state, along, fling, attacker == null ? -1 : attacker.getId());
+		if (!send(target, state, messages, attacker, wasLegless, wasHeadless)) return false;
+		if (target.isAlive() && target.level() instanceof net.minecraft.server.level.ServerLevel level) {
+			ChopServer.finish(target, level, source(target, attacker));
+		}
+		return true;
+	}
+
+	public static boolean halve(LivingEntity target, @Nullable Entity attacker) {
+		return halve(target, 0.5, attacker, false);
+	}
+
+	/**
 	 * Cuts the part of a spot off where the spot is.
 	 */
 	public static boolean sever(LivingEntity target, BodySpot spot, @Nullable Entity attacker, boolean fling) {
@@ -236,11 +260,13 @@ public final class ChopChopApi {
 								boolean wasLegless, boolean wasHeadless) {
 		if (messages.isEmpty()) return false;
 		for (byte[] message : messages) ChopServer.broadcastApi(target, message);
-		var source = attacker instanceof LivingEntity living
-				? target.damageSources().mobAttack(living) : target.damageSources().generic();
-		if (attacker instanceof net.minecraft.world.entity.player.Player player) source = target.damageSources().playerAttack(player);
-		ChopServer.consequences(target, source, state, wasLegless, wasHeadless);
+		ChopServer.consequences(target, source(target, attacker), state, wasLegless, wasHeadless);
 		return true;
+	}
+
+	private static DamageSource source(LivingEntity target, @Nullable Entity attacker) {
+		if (attacker instanceof net.minecraft.world.entity.player.Player player) return target.damageSources().playerAttack(player);
+		return attacker instanceof LivingEntity living ? target.damageSources().mobAttack(living) : target.damageSources().generic();
 	}
 
 	private static @Nullable BodyProfile profile(LivingEntity entity) {

@@ -128,6 +128,26 @@ public final class BodyOps {
 	}
 
 	/**
+	 * Cuts a body in two at the waist: the trunk at {@code along} (0 neck, 1 hips; 0.5 is the middle) and every leg at
+	 * its root, so the lower half falls off. The upper half stays on the entity. Profiles with no part named "body"
+	 * get nothing.
+	 *
+	 * @return the messages for the clients, empty if nothing more came off
+	 */
+	public static List<byte[]> halve(WoundBook book, UUID id, int entityId, WoundState state, double along, boolean fling, int attacker) {
+		List<byte[]> messages = new ArrayList<>();
+		BodyProfile profile = state.getProfile();
+		BodyPart body = profile.part("body");
+		if (body == null || body.gy() < 2) return messages;
+		int row = Math.clamp((int) Math.round(Math.clamp(along, 0, 1) * body.gy()), 1, body.gy() - 1);
+		messages.addAll(book.sever(id, entityId, state, body.getIndex(), row, null, fling, attacker));
+		for (int i = 0; i < profile.getParts().size(); i++) {
+			if (profile.part(i).isLeg()) messages.addAll(book.sever(id, entityId, state, i, 0, null, fling, attacker));
+		}
+		return messages;
+	}
+
+	/**
 	 * A wound at a spot: a round hole, or with a swing direction a cut along it.
 	 *
 	 * @param swing  the way the blade moved, in the world; null for a hole

@@ -123,6 +123,22 @@ public final class ChopChopApi {
 		return ChopApiBridge.sever(target, part, along, attacker, fling);
 	}
 
+	/**
+	 * A fatality: cuts the body in two at the waist. The trunk is cut at {@code along} (0 neck, 1 hips, 0.5 the
+	 * middle) and both legs at the hips; the lower half falls off and the entity dies, the kill going to the
+	 * attacker. Meant for a finishing blow of a combat plugin (a falling cleave, an execution).
+	 *
+	 * @param fling the lower half flies off hard, as from a blast
+	 * @return whether the body was cut (false without a profile or a part named "body")
+	 */
+	public static boolean halve(LivingEntity target, double along, @Nullable Entity attacker, boolean fling) {
+		return ChopApiBridge.halve(target, along, attacker, fling);
+	}
+
+	public static boolean halve(LivingEntity target, @Nullable Entity attacker) {
+		return halve(target, 0.5, attacker, false);
+	}
+
 	public static boolean sever(LivingEntity target, BodySpot spot, @Nullable Entity attacker, boolean fling) {
 		return sever(target, spot.part(), spot.along(), attacker, fling);
 	}

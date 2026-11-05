@@ -421,6 +421,19 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		return rules;
 	}
 
+	/**
+	 * Kills an entity with a blow of the plugin itself: no new wounds from it, the kill goes to the attacker.
+	 */
+	void finishApi(LivingEntity target, org.bukkit.entity.Entity attacker) {
+		consequences.finishing = true;
+		try {
+			target.damage(1.0E9, attacker != null && attacker.isValid() ? attacker : null);
+		} finally {
+			consequences.finishing = false;
+		}
+		if (!target.isDead()) target.setHealth(0);
+	}
+
 	void setAutomatic(java.util.function.BiPredicate<LivingEntity, EntityDamageEvent> filter) {
 		automatic = filter == null ? (target, event) -> true : filter;
 	}

@@ -526,4 +526,11 @@ public final class ChopServer {
 			ChopChop.LOG.warn("Can't load player wounds", e);
 		}
 	}
+	/**
+	 * Kills an entity with a blow of the mod itself, for the API: no new wounds from it.
+	 */
+	public static void finish(net.minecraft.world.entity.LivingEntity entity, net.minecraft.server.level.ServerLevel level,
+							  net.minecraft.world.damagesource.DamageSource source) {
+		Consequences.finish(entity, level, source);
+	}
 }

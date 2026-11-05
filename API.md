@@ -155,6 +155,20 @@ The rules of the server (`severing.chance`, durability, `heads: false`...) do **
 `sever`, the part comes off. Only `legless: protect` is not checked either — check `isLegless`/`remaining` yourself if
 you need that.
 
+## Cutting in half (fatality)
+
+```java
+// the lower half (trunk below the middle + both legs) falls off, the entity dies, the kill goes to the attacker
+ChopChopApi.halve(target, attacker);
+// cut higher (0 neck .. 1 hips), lower half thrown hard
+ChopChopApi.halve(target, 0.4, attacker, true);
+```
+
+Same on Paper (`ru.deelter.chopchop.paper.api.ChopChopApi`). Returns false for an entity whose profile has no
+part named `body`. The finishing blow makes no extra wounds of its own. As an optional dependency, call it from a
+class that is loaded only when ChopChop is present (`FabricLoader.isModLoaded("chopchop")` /
+`isPluginEnabled("ChopChop")`).
+
 ## Wounds without severing
 
 ```java

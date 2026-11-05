@@ -53,6 +53,19 @@ final class Consequences {
 	}
 
 	/**
+	 * Kills an entity with a blow of the mod itself: no new wounds from it, the kill goes to the source.
+	 */
+	public static void finish(LivingEntity entity, ServerLevel level, DamageSource source) {
+		finishing = true;
+		try {
+			if (!entity.hurtServer(level, source, Float.MAX_VALUE) && entity.isAlive()) entity.kill(level);
+		} finally {
+			finishing = false;
+		}
+		if (entity.isAlive()) entity.kill(level);
+	}
+
+	/**
 	 * After a hit changed a body.
 	 */
 	static void apply(LivingEntity entity, DamageSource source, WoundState state, boolean wasLegless, boolean wasHeadless, WoundRules rules) {

@@ -576,6 +576,20 @@ class CoreTest {
 	}
 
 	@Test
+	void halvingCutsTheTrunkAndBothLegs() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(1));
+		UUID id = UUID.randomUUID();
+		WoundState state = book.getOrBlank(id, profile);
+		assertFalse(ru.deelter.chopchop.core.api.BodyOps.halve(book, id, 1, state, 0.5, false, -1).isEmpty());
+		assertEquals(6, state.part(profile.part("body").getIndex()).getSeveredAt());
+		assertTrue(state.legless());
+		assertFalse(state.headless());
+		// cut once: nothing more comes off
+		assertTrue(ru.deelter.chopchop.core.api.BodyOps.halve(book, id, 1, state, 0.5, false, -1).isEmpty());
+	}
+
+	@Test
 	void clientAimIsTakenOnlyWhenPlausible() {
 		BodyProfile profile = PROFILES.byId("zombie");
 		WoundState state = new WoundState(profile);
