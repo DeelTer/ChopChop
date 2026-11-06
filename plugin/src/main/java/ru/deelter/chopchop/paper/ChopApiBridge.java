@@ -37,6 +37,14 @@ public final class ChopApiBridge {
 		return profile == null ? null : plugin().book().getOrBlank(entity.getUniqueId(), profile);
 	}
 
+	public static boolean corpse(LivingEntity target, Entity killer) {
+		return plugin().spawnCorpse(target, killer);
+	}
+
+	public static boolean stagedDeath(LivingEntity target, Entity killer) {
+		return plugin().stagedDeath(target, killer);
+	}
+
 	public static boolean hasBody(LivingEntity entity) {
 		return profile(entity) != null;
 	}

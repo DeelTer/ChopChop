@@ -1,5 +1,7 @@
 package ru.deelter.chopchop.paper;
 
+import org.bukkit.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 import io.papermc.paper.event.player.PlayerTrackEntityEvent;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -356,12 +358,24 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onDeath(org.bukkit.event.entity.EntityDeathEvent event) {
 		LivingEntity target = event.getEntity();
-		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0 || target instanceof Player && !rules.isPlayerCorpses()) return;
+		Entity killer = target.getLastDamageCause() instanceof EntityDamageByEntityEvent by ? by.getDamager() : null;
+		spawnCorpse(target, killer);
+	}
+
+	/**
+	 * Leaves a body on the modded clients, falling away from {@code killer}. Called on a real death, and through
+	 * the API by mini-games whose deaths are staged (lethal damage cancelled, the player teleported): there is
+	 * no death event for those.
+	 *
+	 * @return false when corpses are off or the entity has no body profile
+	 */
+	boolean spawnCorpse(LivingEntity target, @Nullable Entity killer) {
+		if (!rules.isEnabled() || rules.getCorpseSeconds() <= 0 || target instanceof Player && !rules.isPlayerCorpses()) return false;
 		BodyProfile bodyProfile = profiles.forEntity(target.getType().getKey().toString());
-		if (bodyProfile == null || !bodyProfile.isCorpse()) return;
+		if (bodyProfile == null || !bodyProfile.isCorpse()) return false;
 		Vector push = new Vector();
-		if (target.getLastDamageCause() instanceof EntityDamageByEntityEvent by) {
-			push = target.getLocation().toVector().subtract(by.getDamager().getLocation().toVector());
+		if (killer != null && killer.getWorld() == target.getWorld()) {
+			push = target.getLocation().toVector().subtract(killer.getLocation().toVector());
 		}
 		push.setY(0);
 		if (push.lengthSquared() < 1e-6) push = target.getVelocity().setY(0);
@@ -389,6 +403,25 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 				java.util.concurrent.ThreadLocalRandom.current().nextInt(), ticks, corpseId);
 		broadcast(target, message);
 		if (corpses.size() > 256) corpses.values().removeIf(c -> c.until() < c.world().getFullTime());
+		return true;
+	}
+
+	/**
+	 * A staged death: the body stays behind as a corpse and the player is whole again at once — what a real
+	 * death and respawn do, for mini-games that never let the player die.
+	 */
+	boolean stagedDeath(LivingEntity target, @Nullable Entity killer) {
+		boolean corpse = spawnCorpse(target, killer);
+		if (target instanceof Player player) {
+			consequences.clear(player);
+			book.clear(player.getUniqueId());
+			player.getPersistentDataContainer().remove(storageKey);
+			// next tick: after the corpse message, so the body keeps the wounds and only the living one is cleared
+			getServer().getScheduler().runTask(this, () -> broadcast(player, Protocol.clear(player.getEntityId())));
+		} else {
+			ChopApiBridge.heal(target);
+		}
+		return corpse;
 	}
 
 	/**
@@ -615,6 +648,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 
 	@EventHandler
 	public void onRespawn(PlayerRespawnEvent event) {
+		// (staged deaths in mini-games never get here — they call ChopChopApi.stagedDeath)
 		Player player = event.getPlayer();
 		if (event.getRespawnReason() != PlayerRespawnEvent.RespawnReason.DEATH) {
 			getServer().getScheduler().runTask(this, () -> resendSelf(player));

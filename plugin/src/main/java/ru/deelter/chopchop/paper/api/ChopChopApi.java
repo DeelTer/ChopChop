@@ -188,6 +188,23 @@ public final class ChopChopApi {
 		return ChopApiBridge.changeCorpse(corpseId, part, along, false, new double[]{half, shape.radius(), shape.depth()});
 	}
 
+	/**
+	 * Leaves {@code target}'s body as a corpse on modded clients without the entity dying, falling away from
+	 * {@code killer}. False when corpses are off or the entity has no body profile.
+	 */
+	public static boolean corpse(LivingEntity target, @Nullable Entity killer) {
+		return ChopApiBridge.corpse(target, killer);
+	}
+
+	/**
+	 * For mini-games that stage deaths (cancel the lethal damage, teleport the player back): a corpse stays where
+	 * they "died" and they are whole again, as after a real death and respawn. Without this a limb cut off in one
+	 * life stayed off in the next, and no body was left. Returns whether a corpse was left.
+	 */
+	public static boolean stagedDeath(LivingEntity target, @Nullable Entity killer) {
+		return ChopApiBridge.stagedDeath(target, killer);
+	}
+
 	public static void heal(LivingEntity entity) {
 		ChopApiBridge.heal(entity);
 	}
