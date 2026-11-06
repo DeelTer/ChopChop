@@ -145,6 +145,12 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		return player.getWorld().getFullTime() - pending.tick() <= 2 ? pending.aim() : null;
 	}
 	private final List<Pending> pending = new ArrayList<>();
+	/**
+	 * Staged deaths (mini-games): entity -> server tick until which its hits make no wounds. Hits queued before
+	 * the death are dropped too — they used to land a tick after the heal and put the cut limbs, the limp and the
+	 * crawl back on the "respawned" player.
+	 */
+	private final Map<java.util.UUID, Integer> staged = new HashMap<>();
 	private boolean flushScheduled;
 
 	/**
@@ -284,6 +290,11 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		BodyProfile profile = profiles.forEntity(target.getType().getKey().toString());
 		if (profile == null) return;
 		if (consequences.finishing || !automaticAllows(target, event)) return;
+		Integer stagedUntil = staged.get(target.getUniqueId());
+		if (stagedUntil != null) {
+			if (getServer().getCurrentTick() <= stagedUntil) return;
+			staged.remove(target.getUniqueId());
+		}
 		WoundState state = book.getOrBlank(target.getUniqueId(), profile);
 		EntityDamageEvent.DamageCause cause = event.getCause();
 		if (rules.isExplosions() && (cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION || cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION)) {
@@ -395,7 +406,8 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		corpses.put(corpseId, first);
 		int firstRevision = first.state().getRevision();
 		getServer().getScheduler().runTaskLater(this, () -> {
-			if (corpses.get(corpseId) == first && first.state().getRevision() == firstRevision) {
+			// a staged death clears the living player at once: the body keeps what it had at the death
+			if (corpses.get(corpseId) == first && first.state().getRevision() == firstRevision && book.get(target.getUniqueId()) != null) {
 				corpses.put(corpseId, new Corpse(first.world(), first.at(), book.copyOf(book.get(target.getUniqueId()), profile), until));
 			}
 		}, 2);
@@ -412,6 +424,9 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	 */
 	boolean stagedDeath(LivingEntity target, @Nullable Entity killer) {
 		boolean corpse = spawnCorpse(target, killer);
+		java.util.UUID id = target.getUniqueId();
+		pending.removeIf(p -> p.target().getUniqueId().equals(id));
+		staged.put(id, getServer().getCurrentTick() + 2);
 		if (target instanceof Player player) {
 			consequences.clear(player);
 			book.clear(player.getUniqueId());
@@ -640,6 +655,7 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	@EventHandler
 	public void onQuit(PlayerQuitEvent event) {
 		modded.remove(event.getPlayer().getUniqueId());
+		staged.remove(event.getPlayer().getUniqueId());
 		aims.remove(event.getPlayer().getUniqueId());
 		lastCut.remove(event.getPlayer().getUniqueId());
 		lastKick.remove(event.getPlayer().getUniqueId());

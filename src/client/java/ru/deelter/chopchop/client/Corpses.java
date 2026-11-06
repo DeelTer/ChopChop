@@ -238,11 +238,19 @@ public final class Corpses {
 	 */
 	private static Player copy(ClientLevel level, Player player, int id) {
 		try {
-			RemotePlayer copy = new RemotePlayer(level, player.getGameProfile());
+			// Shares the profile, so the game looks its game mode up in the player list: a mini-game that sends the
+			// living player to spectator (a staged death) made the body a spectator too, and spectators are not drawn.
+			RemotePlayer copy = new RemotePlayer(level, player.getGameProfile()) {
+				@Override
+				public boolean isSpectator() {
+					return false;
+				}
+			};
 			copy.setId(id);
 			// the hat and sleeve layers, the main arm and the like
 			var values = player.getEntityData().getNonDefaultValues();
 			if (values != null) copy.getEntityData().assignValues(values);
+			copy.setInvisible(false); // a vanished or spectating player still leaves a visible body
 			copy.setHealth(copy.getMaxHealth());
 			copy.setPose(Pose.STANDING);
 			copy.setPos(player.getX(), player.getY(), player.getZ());
