@@ -107,6 +107,13 @@ public final class GoreRender {
 	 * @param distant far from the camera: only what is cut off is shown, small wounds are left out
 	 */
 	public static void begin(WoundState wounds, Role drawRole, boolean withGore, boolean distant) {
+		begin(wounds, drawRole, withGore, distant, 0);
+	}
+
+	/**
+	 * @param distanceSq squared distance to the camera: far off the bones inside are not looked up
+	 */
+	public static void begin(WoundState wounds, Role drawRole, boolean withGore, boolean distant, double distanceSq) {
 		far = distant;
 		state = wounds;
 		role = drawRole;
@@ -117,7 +124,9 @@ public final class GoreRender {
 		GORED.clear();
 		ownModel = false;
 		SKELETON_QUADS.clear();
-		skeletonTexture = wounds == null || !ClientConfig.get().isSkeletonInside() ? null : SkeletonTexture.of(wounds.getProfile());
+		int bonesUpTo = ClientConfig.get().getSkeletonDistance();
+		skeletonTexture = wounds == null || !ClientConfig.get().isSkeletonInside() || distanceSq > (double) bonesUpTo * bonesUpTo
+				? null : SkeletonTexture.of(wounds.getProfile());
 	}
 
 	/**
@@ -167,6 +176,18 @@ public final class GoreRender {
 
 	public static boolean active() {
 		return state != null;
+	}
+
+	/**
+	 * render types are few and live for the game: what each one is is worked out once, not with a string every frame
+	 */
+	private static final java.util.Map<RenderType, Boolean> ARMOR = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+	/**
+	 * The type draws armour (its name says so).
+	 */
+	public static boolean isArmor(RenderType type) {
+		return ARMOR.computeIfAbsent(type, t -> t.toString().contains("armor"));
 	}
 
 	/**

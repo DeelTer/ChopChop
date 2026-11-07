@@ -32,7 +32,6 @@ import java.util.*;
  * Client thread only.
  */
 public final class Corpses {
-	private static final int MAX = 48;
 	/**
 	 * ticks of sinking into the ground at the end
 	 */
@@ -88,6 +87,11 @@ public final class Corpses {
 		 */
 		final Vec3[] offset = {Vec3.ZERO, Vec3.ZERO};
 		Vec3 velocity = Vec3.ZERO;
+		/**
+		 * the server said where it died: the copy of a player starts there and is not moved after the player, whom each
+		 * client sees a little elsewhere (the own client most of all, it moves its player itself)
+		 */
+		final boolean placed;
 		float height = 1.8F;
 		float width = 0.6F;
 		/**
@@ -106,6 +110,7 @@ public final class Corpses {
 			this.entityId = entityId;
 			this.copy = copy;
 			this.sourceId = sourceId;
+			this.placed = copy != null && message.at() != null;
 			Random random = new Random(message.seed());
 			// never quite the same fall: a little off the push, a little on the side
 			double yaw = Math.atan2(message.dz(), message.dx()) + (random.nextDouble() - 0.5) * 0.5;
@@ -197,12 +202,16 @@ public final class Corpses {
 		bodiesLevel = level;
 		Entity entity = level.getEntity(message.entityId());
 		if (!(entity instanceof LivingEntity living)) return;
-		if (BODIES.size() >= MAX) release(BODIES.keySet().iterator().next());
+		while (BODIES.size() >= ru.deelter.chopchop.client.config.ClientConfig.get().getMaxCorpses()) release(BODIES.keySet().iterator().next());
 		if (living instanceof Player player) {
 			// the id the server gave the body, for blows at it; an old server gives none
 			int id = message.corpseId() != message.entityId() ? message.corpseId() : nextCopyId--;
 			Player copy = copy(level, player, id);
 			if (copy == null) return;
+			if (message.at() != null) {
+				copy.setPos(message.at()[0], message.at()[1], message.at()[2]);
+				copy.setOldPosAndRot();
+			}
 			HIDDEN.put(player.getId(), id);
 			WoundState wounds = ClientWounds.get(player.getId());
 			if (wounds != null) {
@@ -212,14 +221,16 @@ public final class Corpses {
 			}
 			Body body = new Body(message, id, copy, player.getId());
 			size(body, player);
-			pickWay(level, copy, body);
+			pickWay(level, copy.position(), body);
+			// the knock of the last blow, the same on every client: it slides the way it falls
+			if (body.placed) body.velocity = new Vec3(message.dx(), 0, message.dz()).normalize().scale(0.12 + 0.12 * message.strength()).add(0, 0.08, 0);
 			BODIES.put(id, body);
 			// the own body: the camera leaves the eyes to look at it
 			if (player == Minecraft.getInstance().player) ru.deelter.chopchop.client.render.DeathCam.follow(id, message.dx(), message.dz());
 		} else {
 			Body body = new Body(message, message.entityId(), null, -1);
 			size(body, living);
-			pickWay(level, living, body);
+			pickWay(level, message.at() != null ? new Vec3(message.at()[0], message.at()[1], message.at()[2]) : living.position(), body);
 			BODIES.put(message.entityId(), body);
 		}
 	}
@@ -603,7 +614,7 @@ public final class Corpses {
 	 * The way to fall: the way of the blow if there is room to lie down, otherwise the nearest way round that has
 	 * room; with room nowhere, the way of the blow, and it leans on whatever is there.
 	 */
-	private static void pickWay(ClientLevel level, Entity entity, Body body) {
+	private static void pickWay(ClientLevel level, Vec3 feet, Body body) {
 		float dx = body.dx, dz = body.dz;
 		double[] turns = {0, 0.6, -0.6, 1.2, -1.2, 1.9, -1.9, Math.PI};
 		for (double turn : turns) {
@@ -611,7 +622,7 @@ public final class Corpses {
 			float cz = (float) (dx * Math.sin(turn) + dz * Math.cos(turn));
 			body.dx = cx;
 			body.dz = cz;
-			if (clear(level, entity.position(), body, RIGHT_ANGLE)) return;
+			if (clear(level, feet, body, RIGHT_ANGLE)) return;
 		}
 		body.dx = dx;
 		body.dz = dz;
@@ -638,7 +649,7 @@ public final class Corpses {
 		if (!Objects.equals(HIDDEN.get(body.sourceId), body.entityId)) return;
 		Entity real = level.getEntity(body.sourceId);
 		if (!(real instanceof LivingEntity living) || !living.isDeadOrDying()) return;
-		body.copy.setPos(real.getX(), real.getY(), real.getZ());
+		if (!body.placed) body.copy.setPos(real.getX(), real.getY(), real.getZ());
 		// the wounds of the death only (on Paper the killing blow comes a tick late); later the body has its own, cut
 		// by blows at it, and the living player's must not overwrite them
 		if (body.age > 10) return;

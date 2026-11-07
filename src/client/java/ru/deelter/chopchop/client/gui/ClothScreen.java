@@ -53,6 +53,12 @@ public final class ClothScreen {
 				.setDefaultValue(defaults.isHideItems()).setSaveConsumer(config::setHideItems).build());
 		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.maxDistance"), config.getMaxDistance(), 8, 256)
 				.setDefaultValue(defaults.getMaxDistance()).setSaveConsumer(config::setMaxDistance).build());
+		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.skeletonDistance"), config.getSkeletonDistance(), 0, 256)
+				.setDefaultValue(defaults.getSkeletonDistance()).setSaveConsumer(config::setSkeletonDistance).build());
+		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.maxDebris"), config.getMaxDebris(), 1, 256)
+				.setDefaultValue(defaults.getMaxDebris()).setSaveConsumer(config::setMaxDebris).build());
+		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.maxCorpses"), config.getMaxCorpses(), 1, 256)
+				.setDefaultValue(defaults.getMaxCorpses()).setSaveConsumer(config::setMaxCorpses).build());
 		visual.addEntry(entries.startBooleanToggle(Component.translatable("chopchop.config.headCam"), config.isHeadCam())
 				.setDefaultValue(defaults.isHeadCam()).setSaveConsumer(config::setHeadCam).build());
 		visual.addEntry(entries.startIntSlider(Component.translatable("chopchop.config.headCamSeconds"), (int) Math.round(config.getHeadCamSeconds()), 0, 15)

@@ -54,6 +54,18 @@ public final class ClientConfig {
 	private boolean hideItems = true;
 	private int maxDistance = 64;
 	/**
+	 * pieces of bodies lying about at once, the oldest goes first
+	 */
+	private int maxDebris = 48;
+	/**
+	 * dead bodies lying about at once, the oldest goes first
+	 */
+	private int maxCorpses = 48;
+	/**
+	 * farther than this, blocks, a wound shows meat only, not the bones of the skeleton inside (cheaper)
+	 */
+	private int skeletonDistance = 24;
+	/**
 	 * the camera rides in your head when it comes off
 	 */
 	private boolean headCam = true;
@@ -114,6 +126,9 @@ public final class ClientConfig {
 		soundVolume = Math.clamp(soundVolume, 0, 2);
 		debrisSeconds = Math.clamp(debrisSeconds, 1, 60);
 		maxDistance = Math.clamp(maxDistance, 8, 256);
+		maxDebris = Math.clamp(maxDebris, 1, 256);
+		maxCorpses = Math.clamp(maxCorpses, 1, 256);
+		skeletonDistance = Math.clamp(skeletonDistance, 0, 256);
 		headCamSeconds = Math.clamp(headCamSeconds, 0, 15);
 		killCamSeconds = Math.clamp(killCamSeconds, 0.5, 6);
 	}

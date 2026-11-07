@@ -168,6 +168,14 @@ public final class Protocol {
 	}
 
 	public static byte[] corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId) {
+		return corpse(entityId, dx, dz, strength, seed, ticks, corpseId, null);
+	}
+
+	/**
+	 * @param at where the entity was on the server when it died (feet), so every client starts the body at the same
+	 *           place; null leaves it to where each client sees the entity
+	 */
+	public static byte[] corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId, double[] at) {
 		return write(out -> {
 			out.writeByte(S_CORPSE);
 			out.writeInt(entityId);
@@ -177,6 +185,12 @@ public final class Protocol {
 			out.writeInt(seed);
 			out.writeInt(ticks);
 			out.writeInt(corpseId);
+			// appended: readers of the fixed offsets before it (a replay plugin) keep working
+			if (at != null) {
+				out.writeDouble(at[0]);
+				out.writeDouble(at[1]);
+				out.writeDouble(at[2]);
+			}
 		});
 	}
 
@@ -247,7 +261,12 @@ public final class Protocol {
 				if (!Float.isFinite(dx) || !Float.isFinite(dz) || !Float.isFinite(strength)) throw new IOException("bad corpse");
 				int seed = in.readInt(), ticks = Math.clamp(in.readInt(), 0, 20 * 600);
 				int corpseId = in.available() >= 4 ? in.readInt() : entity;
-				yield new Message.Corpse(entity, dx, dz, Math.clamp(strength, 0, 2), seed, ticks, corpseId);
+				double[] at = null;
+				if (in.available() >= 24) {
+					at = new double[]{in.readDouble(), in.readDouble(), in.readDouble()};
+					if (!Double.isFinite(at[0]) || !Double.isFinite(at[1]) || !Double.isFinite(at[2])) at = null;
+				}
+				yield new Message.Corpse(entity, dx, dz, Math.clamp(strength, 0, 2), seed, ticks, corpseId, at);
 			}
 			default -> throw new IOException("unknown message " + type);
 		};
@@ -363,7 +382,13 @@ public final class Protocol {
 		record Clear(int entityId) implements Message {
 		}
 
-		record Corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId) implements Message {
+		/**
+		 * @param at where the entity died on the server, feet; null from an older server
+		 */
+		record Corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId, double[] at) implements Message {
+			public Corpse(int entityId, float dx, float dz, float strength, int seed, int ticks, int corpseId) {
+				this(entityId, dx, dz, strength, seed, ticks, corpseId, null);
+			}
 		}
 	}
 }

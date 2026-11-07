@@ -40,7 +40,6 @@ import java.util.List;
  * Simulated per tick, drawn interpolated, so a camera can ride along smoothly ({@link HeadCam}).
  */
 public final class Debris {
-	private static final int MAX_PIECES = 48;
 	private static final double GRAVITY = 0.045;
 	/**
 	 * ticks a piece takes to fade out at the end of its time
@@ -221,7 +220,7 @@ public final class Debris {
 					(grid.oz() + grid.sz() * grid.gz() / 2F) / 16F));
 			float size = first.world().getScale(new Vector3f()).x * Math.max(grid.sx() * grid.gx(), grid.sz() * grid.gz()) / 16F;
 			// the oldest piece goes first, never a head with a camera in it
-			if (CHUNKS.size() >= MAX_PIECES) {
+			if (CHUNKS.size() >= ClientConfig.get().getMaxDebris()) {
 				for (Iterator<Chunk> it = CHUNKS.iterator(); it.hasNext(); ) {
 					if (!it.next().kept) {
 						it.remove();

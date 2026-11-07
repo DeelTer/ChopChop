@@ -429,7 +429,8 @@ public final class ChopServer {
 			CORPSES.put(corpseId, first);
 			RECOPIES.add(new Recopy(corpseId, first, first.state().getRevision(), target.getUUID(), profile, level.getServer().getTickCount() + 2));
 		}
-		byte[] message = Protocol.corpse(target.getId(), (float) push.x, (float) push.z, strength, RANDOM.nextInt(), ticks, corpseId);
+		byte[] message = Protocol.corpse(target.getId(), (float) push.x, (float) push.z, strength, RANDOM.nextInt(), ticks, corpseId,
+				new double[]{target.getX(), target.getY(), target.getZ()});
 		broadcast(target, message);
 	}
 

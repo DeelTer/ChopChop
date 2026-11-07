@@ -52,9 +52,10 @@ public abstract class ModelFeatureRendererMixin {
 					var entityState = (net.minecraft.client.renderer.entity.state.EntityRenderState) submit.state();
 					Debris.capture(model, wounds, state.chopchop$entityId(), submit.pose(), type, state.chopchop$texture(), state.chopchop$camera(),
 							new net.minecraft.world.phys.Vec3(entityState.x, entityState.y, entityState.z));
-					GoreRender.begin(wounds, GoreRender.Role.MAIN, gore, far);
+					GoreRender.begin(wounds, GoreRender.Role.MAIN, gore, far, entityState.distanceToCameraSq);
 				} else {
-					GoreRender.begin(wounds, type.toString().contains("armor") ? GoreRender.Role.ARMOR : GoreRender.Role.LAYER, false, far);
+					GoreRender.begin(wounds, GoreRender.isArmor(type) ? GoreRender.Role.ARMOR : GoreRender.Role.LAYER, false, far,
+							((net.minecraft.client.renderer.entity.state.EntityRenderState) submit.state()).distanceToCameraSq);
 				}
 			} else if (model instanceof Model.Simple) {
 				WoundState wounds = FirstPerson.forArm(model.root());

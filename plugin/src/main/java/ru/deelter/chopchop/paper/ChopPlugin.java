@@ -412,7 +412,8 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			}
 		}, 2);
 		byte[] message = Protocol.corpse(target.getEntityId(), (float) push.getX(), (float) push.getZ(), strength,
-				java.util.concurrent.ThreadLocalRandom.current().nextInt(), ticks, corpseId);
+				java.util.concurrent.ThreadLocalRandom.current().nextInt(), ticks, corpseId,
+				new double[]{target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ()});
 		broadcast(target, message);
 		if (corpses.size() > 256) corpses.values().removeIf(c -> c.until() < c.world().getFullTime());
 		return true;

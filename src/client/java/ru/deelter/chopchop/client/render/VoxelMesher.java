@@ -168,23 +168,28 @@ public final class VoxelMesher {
 	}
 
 	private static void face(Grid g, int x, int y, int z, int[] d, float[] uv, Matrix4f matrix, Vector3f p, Vector3f n, Sink sink, float shade) {
-		float x0 = g.ox + x * g.sx, y0 = g.oy + y * g.sy, z0 = g.oz + z * g.sz;
-		float x1 = x0 + g.sx, y1 = y0 + g.sy, z1 = z0 + g.sz;
-		float[][] c;
-		if (d[0] != 0) {
-			float fx = d[0] > 0 ? x1 : x0;
-			c = new float[][]{{fx, y0, z0}, {fx, y0, z1}, {fx, y1, z1}, {fx, y1, z0}};
-		} else if (d[1] != 0) {
-			float fy = d[1] > 0 ? y1 : y0;
-			c = new float[][]{{x0, fy, z0}, {x1, fy, z0}, {x1, fy, z1}, {x0, fy, z1}};
-		} else {
-			float fz = d[2] > 0 ? z1 : z0;
-			c = new float[][]{{x0, y0, fz}, {x1, y0, fz}, {x1, y1, fz}, {x0, y1, fz}};
-		}
-		float[][] t = {{uv[0], uv[1]}, {uv[2], uv[1]}, {uv[2], uv[3]}, {uv[0], uv[3]}};
+		// called for every face of every wound each frame: no arrays, the four corners worked out in place
+		float x0 = (g.ox + x * g.sx) / 16F, y0 = (g.oy + y * g.sy) / 16F, z0 = (g.oz + z * g.sz) / 16F;
+		float x1 = x0 + g.sx / 16F, y1 = y0 + g.sy / 16F, z1 = z0 + g.sz / 16F;
 		for (int k = 0; k < 4; k++) {
-			matrix.transformPosition(c[k][0] / 16F, c[k][1] / 16F, c[k][2] / 16F, p);
-			sink.vertex(p.x, p.y, p.z, t[k][0], t[k][1], n.x, n.y, n.z, shade);
+			// corners in the order 00, 10, 11, 01 of the face's own two axes
+			boolean a = k == 1 || k == 2, b = k >= 2;
+			float cx, cy, cz;
+			if (d[0] != 0) {
+				cx = d[0] > 0 ? x1 : x0;
+				cy = b ? y1 : y0;
+				cz = a ? z1 : z0;
+			} else if (d[1] != 0) {
+				cx = a ? x1 : x0;
+				cy = d[1] > 0 ? y1 : y0;
+				cz = b ? z1 : z0;
+			} else {
+				cx = a ? x1 : x0;
+				cy = b ? y1 : y0;
+				cz = d[2] > 0 ? z1 : z0;
+			}
+			matrix.transformPosition(cx, cy, cz, p);
+			sink.vertex(p.x, p.y, p.z, a ? uv[2] : uv[0], b ? uv[3] : uv[1], n.x, n.y, n.z, shade);
 		}
 	}
 
