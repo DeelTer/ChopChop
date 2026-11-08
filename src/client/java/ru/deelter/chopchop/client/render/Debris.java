@@ -239,8 +239,11 @@ public final class Debris {
 			}
 			if (ClientConfig.get().isSkeletonInside()) chunk.skeleton = SkeletonTexture.of(state.getProfile());
 			CHUNKS.add(chunk);
-			if (chunk.head && Minecraft.getInstance().player != null
-					&& (entityId == Minecraft.getInstance().player.getId() || ru.deelter.chopchop.client.Corpses.sourceOf(entityId) == Minecraft.getInstance().player.getId())) {
+			var self = Minecraft.getInstance().player;
+			// the own head: off the own body, or off the body left behind while still dead. A head taken off that body
+			// after respawning is someone else's doing to a corpse: the camera stays with the living player
+			if (chunk.head && self != null && (entityId == self.getId()
+					|| ru.deelter.chopchop.client.Corpses.sourceOf(entityId) == self.getId() && self.isDeadOrDying())) {
 				HeadCam.follow(chunk);
 			} else if (chunk.head) {
 				KillCam.offer(chunk, entityId);
