@@ -54,4 +54,13 @@ public final class ChopChopClientApi {
 	public static boolean cut(int id, Vec3 from, Vec3 dir, double length) {
 		return ModelPick.cutCorpseAlong(id, from, dir, length);
 	}
+
+	/**
+	 * the hand on that side ("left" or "right") of an entity this client draws is cut off: another mod may fight with
+	 * the other one instead
+	 */
+	public static boolean isHandless(net.minecraft.world.entity.Entity entity, String side) {
+		var state = ru.deelter.chopchop.client.ClientWounds.get(entity.getId());
+		return state != null && state.handless(side);
+	}
 }
