@@ -307,6 +307,15 @@ public final class GoreRender {
 			boolean bone = Material.bleeds(material) && ClientConfig.get().isBones() && part.getBoneScale() > 0;
 			if (partState.getSeveredAt() == 0 && socketGone(wounds, part)) {
 				// the part it sat on went with it (a body cleaved or cut in two): no stump left in the air
+			} else if (partState.getSeveredAt() == 0 && !part.isHead()) {
+				// a whole limb off: the stump is at its root (row 0, the shoulder or the hip), not at its far end where
+				// the hand or the foot was; meat over the joint and the bone standing out of it, as a limb cut lower
+				VoxelMesher.neck(grid, 0, true, pose, inside);
+				if (bone) {
+					boolean real = skeletonTexture != null && part.getSkeleton() != null
+							&& VoxelMesher.skeletonStump(grid, 0, true, part.getSkeleton(), skeletonTexture, pose, SKELETON_QUADS);
+					if (!real) VoxelMesher.bone(grid, 0, part.getBoneScale(), true, pose, BONE_QUADS);
+				}
 			} else if (partState.getSeveredAt() == 0) {
 				// the whole part is off, a head: the stump is where it sat, a neck of meat with the bone standing out
 				VoxelMesher.neck(grid, grid.gy(), false, pose, inside);
