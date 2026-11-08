@@ -153,6 +153,23 @@ final class PaperConsequences {
 		frozen.clear();
 	}
 
+	/**
+	 * A body that grew back: no limp without a lost leg, no crawl with a leg to stand on.
+	 */
+	void regrown(LivingEntity entity, WoundState state) {
+		if (state == null) {
+			clear(entity);
+			return;
+		}
+		if (state.legsGone() == 0) stopLimping(entity);
+		if (!state.legless()) {
+			if (entity instanceof Mob mob && lying.remove(mob)) mob.setAware(true);
+			if (entity instanceof Player player) player.setPose(Pose.STANDING, false);
+			AttributeInstance speed = entity.getAttribute(Attribute.MOVEMENT_SPEED);
+			if (speed != null) speed.removeModifier(crawlKey);
+		}
+	}
+
 	void clear(LivingEntity entity) {
 		stopLimping(entity);
 		if (entity instanceof Mob mob && lying.remove(mob)) mob.setAware(true);

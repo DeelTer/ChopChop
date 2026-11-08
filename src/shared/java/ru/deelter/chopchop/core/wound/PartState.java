@@ -114,6 +114,51 @@ public final class PartState {
 		this.severedAt = severedAt < 0 || severedAt >= part.gy() ? NOT_SEVERED : severedAt;
 	}
 
+	/**
+	 * Closes up to {@code count} carved voxels of the part as it is (not the cut off end): the ones with the most
+	 * flesh around them first, so a wound fills from its walls and bottom outwards.
+	 *
+	 * @return how many closed
+	 */
+	public int close(int count) {
+		int closed = 0;
+		while (closed < count) {
+			int best = -1, bestAround = -1;
+			for (int i = carved.nextSetBit(0); i >= 0; i = carved.nextSetBit(i + 1)) {
+				int x = i % part.gx(), y = (i / part.gx()) % part.gy(), z = i / (part.gx() * part.gy());
+				if (y >= severedAt) continue;
+				int around = 0;
+				if (!gone(x + 1, y, z)) around++;
+				if (!gone(x - 1, y, z)) around++;
+				if (!gone(x, y + 1, z)) around++;
+				if (!gone(x, y - 1, z)) around++;
+				if (!gone(x, y, z + 1)) around++;
+				if (!gone(x, y, z - 1)) around++;
+				if (around > bestAround) {
+					best = i;
+					bestAround = around;
+				}
+			}
+			if (best < 0) break;
+			carved.clear(best);
+			closed++;
+		}
+		return closed;
+	}
+
+	/**
+	 * Grows a cut off part back by one row of voxels, whole (old wounds in that row are gone with it).
+	 *
+	 * @return whether it grew; false when it was not cut off
+	 */
+	public boolean regrow() {
+		if (!severed()) return false;
+		for (int x = 0; x < part.gx(); x++) for (int z = 0; z < part.gz(); z++) carved.clear(index(x, severedAt, z));
+		severedAt++;
+		if (severedAt >= part.gy()) severedAt = NOT_SEVERED;
+		return true;
+	}
+
 	public void clear() {
 		carved.clear();
 		severedAt = NOT_SEVERED;

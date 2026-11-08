@@ -288,6 +288,7 @@ public final class ChopServer {
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> resendSelf(player));
 		ServerTickEvents.END_SERVER_TICK.register(Consequences::tick);
 		ServerTickEvents.END_SERVER_TICK.register(ChopServer::tickCorpses);
+		ServerTickEvents.END_SERVER_TICK.register(ChopServer::regenerate);
 		// players crawl in the vanilla pose, their profile has no crawl of its own
 		Crawling.server = player -> {
 			WoundState state = book == null ? null : book.get(player.getUUID());
@@ -459,6 +460,28 @@ public final class ChopServer {
 		if (book != null && book.clear(entity.getUUID())) {
 			PLAYERS.remove(entity.getUUID());
 			broadcast(entity, Protocol.clear(entity.getId()));
+		}
+	}
+
+	/**
+	 * Once a second: players under Regeneration heal, wounds close and lost limbs grow back.
+	 */
+	private static void regenerate(MinecraftServer server) {
+		if (book == null || config == null || server.getTickCount() % 20 != 0) return;
+		WoundRules rules = config.getRules();
+		if (!rules.isEnabled() || !rules.isRegeneration()) return;
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (!player.isAlive() || book.get(player.getUUID()) == null) continue;
+			var effect = player.getEffect(net.minecraft.world.effect.MobEffects.REGENERATION);
+			if (effect == null) continue;
+			int level = effect.getAmplifier() + 1;
+			List<byte[]> messages = book.regenerate(player.getUUID(), player.getId(), rules.getRegenerationVoxels() * level,
+					rules.getRegenerationRows() * level);
+			if (messages.isEmpty()) continue;
+			for (byte[] message : messages) broadcast(player, message);
+			WoundState state = book.get(player.getUUID());
+			if (state == null) PLAYERS.remove(player.getUUID());
+			Consequences.regrown(player, state);
 		}
 	}
 

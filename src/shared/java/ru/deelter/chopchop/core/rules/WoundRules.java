@@ -124,6 +124,20 @@ public final class WoundRules {
 	 */
 	private int limpSlowness = 1;
 	/**
+	 * a player under Regeneration heals: wounds close and cut off parts grow back, legs first, a row at a time.
+	 * A golden apple (Regeneration II for a few seconds) closes wounds and gives back part of a limb, an enchanted
+	 * one (twenty seconds) most of the body
+	 */
+	private boolean regeneration = true;
+	/**
+	 * voxels of wounds closed per second at Regeneration I; every level more adds as many
+	 */
+	private int regenerationVoxels = 6;
+	/**
+	 * rows of a cut off part grown back per second at Regeneration I; every level more adds as many
+	 */
+	private int regenerationRows = 1;
+	/**
 	 * What a mob without legs does: "lie" (lies still with its AI off, only its head follows the nearest player) or
 	 * "crawl" (keeps after its target at {@link #crawlSpeed}). Players always crawl in the vanilla pose
 	 */

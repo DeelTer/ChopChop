@@ -183,6 +183,8 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 		getServer().getScheduler().runTaskTimer(this, () -> {
 			for (Player player : getServer().getOnlinePlayers()) consequences.limp(player, book.get(player.getUniqueId()), rules);
 		}, 40, 40);
+		// once a second: players under Regeneration heal, wounds close and lost limbs grow back
+		getServer().getScheduler().runTaskTimer(this, this::regenerate, 20, 20);
 		book = new WoundBook(profiles, new Random());
 		getServer().getMessenger().registerIncomingPluginChannel(this, Protocol.CHANNEL, this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Protocol.CHANNEL);
@@ -501,6 +503,23 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 	void consequencesApi(LivingEntity target, Entity attacker, WoundState state, boolean wasLegless, boolean wasHeadless) {
 		consequences.apply(target, attacker, state, wasLegless, wasHeadless, rules);
 		if (target instanceof Player player && rules.isPersistPlayers()) store(player);
+	}
+
+	private void regenerate() {
+		if (book == null || !rules.isEnabled() || !rules.isRegeneration()) return;
+		for (Player player : getServer().getOnlinePlayers()) {
+			if (player.isDead() || book.get(player.getUniqueId()) == null) continue;
+			org.bukkit.potion.PotionEffect effect = player.getPotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION);
+			if (effect == null) continue;
+			int level = effect.getAmplifier() + 1;
+			var messages = book.regenerate(player.getUniqueId(), player.getEntityId(), rules.getRegenerationVoxels() * level,
+					rules.getRegenerationRows() * level);
+			if (messages.isEmpty()) continue;
+			for (byte[] message : messages) broadcast(player, message);
+			WoundState state = book.get(player.getUniqueId());
+			if (state == null) player.getPersistentDataContainer().remove(storageKey);
+			consequences.regrown(player, state);
+		}
 	}
 
 	public void healApi(LivingEntity entity) {

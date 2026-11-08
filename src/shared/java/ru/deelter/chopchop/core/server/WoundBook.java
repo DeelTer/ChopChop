@@ -258,6 +258,48 @@ public final class WoundBook {
 	}
 
 	/**
+	 * Heals a body a step: closes up to {@code voxels} voxels of wounds and grows {@code rows} rows of cut off
+	 * parts back, legs first, then arms, then the rest (a head is not grown back: without it the body is dead).
+	 *
+	 * @return the messages for the clients: a state, a clear when the body is whole again; empty if nothing changed
+	 */
+	public List<byte[]> regenerate(UUID id, int entityId, int voxels, int rows) {
+		List<byte[]> messages = new ArrayList<>(1);
+		WoundState state = states.get(id);
+		if (state == null) return messages;
+		boolean changed = false;
+		for (int pass = 0; pass < 3 && rows > 0; pass++) {
+			for (int i = 0; i < state.partCount() && rows > 0; i++) {
+				var p = state.part(i);
+				var def = p.getPart();
+				if (def.isHead() || !p.severed()) continue;
+				boolean wanted = pass == 0 ? def.isLeg() : pass == 1 ? def.getHand() != null : !def.isLeg() && def.getHand() == null;
+				while (wanted && rows > 0 && p.regrow()) {
+					rows--;
+					changed = true;
+					if (!p.severed()) break;
+				}
+			}
+		}
+		for (int i = 0; i < state.partCount() && voxels > 0; i++) {
+			int closed = state.part(i).close(voxels);
+			voxels -= closed;
+			if (closed > 0) changed = true;
+		}
+		if (!changed) return messages;
+		boolean whole = true;
+		for (int i = 0; i < state.partCount(); i++) if (!state.part(i).pristine()) whole = false;
+		if (whole) {
+			states.remove(id);
+			messages.add(Protocol.clear(entityId));
+		} else {
+			state.touch();
+			messages.add(Protocol.state(entityId, state));
+		}
+		return messages;
+	}
+
+	/**
 	 * Carves a wound at a hit, whatever the chance in the rules: for the API.
 	 *
 	 * @param slash      direction of a cut across the surface in voxels of the grid, null for a round hole

@@ -609,6 +609,30 @@ class CoreTest {
 	}
 
 	@Test
+	void regenerationGrowsLegsFirstThenHeals() {
+		BodyProfile profile = PROFILES.byId("zombie");
+		WoundBook book = new WoundBook(PROFILES, new Random(1));
+		UUID id = UUID.randomUUID();
+		WoundState state = book.getOrBlank(id, profile);
+		ru.deelter.chopchop.core.api.BodyOps.sever(book, id, 1, state, "left_arm", 0.5, false, -1);
+		ru.deelter.chopchop.core.api.BodyOps.sever(book, id, 1, state, "right_leg", 0, false, -1);
+		PartState body = state.part(profile.part("body").getIndex());
+		body.carve(3, 5, 0);
+		body.carve(3, 5, 1);
+		// one row: the leg grows, the arm waits
+		assertFalse(book.regenerate(id, 1, 0, 1).isEmpty());
+		assertEquals(1, state.part(profile.part("right_leg").getIndex()).getSeveredAt());
+		assertEquals(6, state.part(profile.part("left_arm").getIndex()).getSeveredAt());
+		// the wound closes, then the rest grows back: whole, the body is forgotten
+		book.regenerate(id, 1, 1, 0);
+		assertEquals(1, body.carvedCount());
+		var last = book.regenerate(id, 1, 10, 100);
+		assertEquals(ru.deelter.chopchop.core.net.Protocol.S_CLEAR, last.getFirst()[0]);
+		assertNull(book.get(id));
+		assertTrue(book.regenerate(id, 1, 10, 10).isEmpty());
+	}
+
+	@Test
 	void clientAimIsTakenOnlyWhenPlausible() {
 		BodyProfile profile = PROFILES.byId("zombie");
 		WoundState state = new WoundState(profile);

@@ -159,6 +159,7 @@ public class ChopClientGameTest implements FabricClientGameTest {
 			killCamSkippedUnderThreat(context, world, base);
 			killCam(context, world, base);
 			fatalities(context, world, base);
+			regrowth(context, world, base);
 			tnt(context, world, base);
 			blownUp(context, world, base);
 			ownCorpse(context, world, base);
@@ -427,6 +428,30 @@ public class ChopClientGameTest implements FabricClientGameTest {
 		System.out.println("[ChopChop gametest] tnt carved=" + summary[0] + " severed=" + summary[1]);
 		if (summary[0] <= 0) throw new AssertionError("TNT left no wounds");
 		if (summary[1] <= 0) throw new AssertionError("TNT right next to a zombie took no limb");
+	}
+
+	/**
+	 * A player without a leg drinks Regeneration II: the leg grows back row by row, the limp goes with it.
+	 */
+	private static void regrowth(ClientGameTestContext context, TestSingleplayerContext world, Vec3 base) {
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = player(server);
+			player.teleportTo(player.level(), base.x + 50, base.y, base.z, java.util.Set.of(), 0, 0, true);
+			ru.deelter.chopchop.api.ChopChopApi.sever(player, "left_leg", 0.3, null, false);
+		});
+		context.waitTicks(45);
+		boolean limping = world.getServer().computeOnServer(server -> player(server).hasEffect(net.minecraft.world.effect.MobEffects.SLOWNESS));
+		world.getServer().runOnServer(server -> player(server).addEffect(
+				new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 20 * 8, 1)));
+		context.waitTicks(20 * 7);
+		boolean[] after = world.getServer().computeOnServer(server -> new boolean[]{
+				ru.deelter.chopchop.api.ChopChopApi.isSevered(player(server), "left_leg"),
+				player(server).hasEffect(net.minecraft.world.effect.MobEffects.SLOWNESS)});
+		boolean clientWhole = context.computeOnClient(client -> ru.deelter.chopchop.client.ClientWounds.get(client.player.getId()) == null);
+		System.out.println("[ChopChop gametest] regrowth limping=" + limping + " severed=" + after[0] + " slow=" + after[1] + " clientWhole=" + clientWhole);
+		if (!limping) throw new AssertionError("No limp without a leg");
+		if (after[0] || after[1]) throw new AssertionError("Regeneration did not give the leg back");
+		if (!clientWhole) throw new AssertionError("The client still sees the leg gone");
 	}
 
 	/**

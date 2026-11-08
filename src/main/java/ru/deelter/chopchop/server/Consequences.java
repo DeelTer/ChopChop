@@ -193,6 +193,21 @@ final class Consequences {
 		}
 	}
 
+	/**
+	 * A body that grew back: no limp without a lost leg, no crawl with a leg to stand on.
+	 */
+	static void regrown(LivingEntity entity, WoundState state) {
+		if (state == null) {
+			clear(entity);
+			return;
+		}
+		if (state.legsGone() == 0) stopLimping(entity);
+		if (!state.legless()) {
+			AttributeInstance speed = entity.getAttribute(Attributes.MOVEMENT_SPEED);
+			if (speed != null) speed.removeModifier(CRAWL_SPEED);
+		}
+	}
+
 	static void reset() {
 		HEADLESS.clear();
 		FROZEN.forEach((mob, f) -> mob.setNoAi(f[1] == 1));
