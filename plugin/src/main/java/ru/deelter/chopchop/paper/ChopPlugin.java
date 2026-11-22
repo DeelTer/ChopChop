@@ -209,6 +209,12 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 
 	@Override
 	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String @NotNull [] args) {
+		// sever has a permission of its own; the rest is for admins
+		boolean sever = args.length >= 1 && args[0].equalsIgnoreCase("sever");
+		if (!sever && !sender.hasPermission("chopchop.admin")) {
+			sender.sendMessage("No permission");
+			return true;
+		}
 		if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
 			reload();
 			book = new WoundBook(profiles, new Random());
@@ -225,11 +231,86 @@ public final class ChopPlugin extends JavaPlugin implements Listener, PluginMess
 			sender.sendMessage("Healed " + target.getName());
 			return true;
 		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("sever")) {
+			if (!sender.hasPermission("chopchop.sever")) {
+				sender.sendMessage("No permission");
+				return true;
+			}
+			if (args.length < 3) {
+				sender.sendMessage("/" + label + " sever <player> <part|legs> [0..1 along the part]");
+				return true;
+			}
+			Player target = getServer().getPlayerExact(args[1]);
+			if (target == null) {
+				sender.sendMessage("No such player");
+				return true;
+			}
+			List<String> parts = severable(target);
+			if (parts.isEmpty()) {
+				sender.sendMessage(target.getName() + " has no body to cut");
+				return true;
+			}
+			double along = 0;
+			if (args.length > 3) {
+				try {
+					along = Math.clamp(Double.parseDouble(args[3]), 0, 1);
+				} catch (NumberFormatException e) {
+					sender.sendMessage("Not a number: " + args[3]);
+					return true;
+				}
+			}
+			List<String> cut = args[2].equalsIgnoreCase("legs") ? parts.stream().filter(p -> p.endsWith("_leg")).toList()
+					: parts.contains(args[2]) ? List.of(args[2]) : List.of();
+			if (cut.isEmpty()) {
+				sender.sendMessage("No such part: " + args[2] + " (" + String.join(", ", parts) + ", legs)");
+				return true;
+			}
+			boolean any = false;
+			for (String part : cut) any |= ChopApiBridge.sever(target, part, along, sender instanceof Entity e && e != target ? e : null, false);
+			sender.sendMessage(any ? "Cut " + String.join(", ", cut) + " off " + target.getName() : "Nothing more to cut there");
+			return true;
+		}
 		if (args.length == 1 && args[0].equalsIgnoreCase("stats")) {
 			sender.sendMessage("ChopChop: " + book.size() + " wounded, " + modded.size() + " players with the mod");
 			return true;
 		}
 		return false;
+	}
+
+	@Override
+	public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String @NotNull [] args) {
+		List<String> options = switch (args.length) {
+			case 1 -> {
+				List<String> list = new ArrayList<>();
+				if (sender.hasPermission("chopchop.admin")) list.addAll(List.of("reload", "stats", "heal"));
+				if (sender.hasPermission("chopchop.sever")) list.add("sever");
+				yield list;
+			}
+			case 2 -> args[0].equalsIgnoreCase("heal") && sender.hasPermission("chopchop.admin")
+					|| args[0].equalsIgnoreCase("sever") && sender.hasPermission("chopchop.sever")
+					? getServer().getOnlinePlayers().stream().map(Player::getName).toList() : List.of();
+			case 3 -> {
+				if (!args[0].equalsIgnoreCase("sever") || !sender.hasPermission("chopchop.sever")) yield List.of();
+				Player target = getServer().getPlayerExact(args[1]);
+				List<String> parts = new ArrayList<>(target == null ? List.of() : severable(target));
+				if (parts.stream().anyMatch(p -> p.endsWith("_leg"))) parts.add("legs");
+				yield parts;
+			}
+			case 4 -> args[0].equalsIgnoreCase("sever") ? List.of("0", "0.5") : List.of();
+			default -> List.of();
+		};
+		String typed = args[args.length - 1].toLowerCase(Locale.ROOT);
+		return options.stream().filter(o -> o.toLowerCase(Locale.ROOT).startsWith(typed)).toList();
+	}
+
+	/**
+	 * The parts of the body of an entity, by name, as the command takes them.
+	 */
+	private List<String> severable(LivingEntity entity) {
+		BodyProfile profile = profiles.forEntity(entity.getType().getKey().toString());
+		List<String> names = new ArrayList<>();
+		if (profile != null) for (int i = 0; i < profile.getParts().size(); i++) names.add(profile.part(i).getName());
+		return names;
 	}
 
 	@Override

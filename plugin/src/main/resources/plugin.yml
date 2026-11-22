@@ -7,9 +7,11 @@ description: Server side of the ChopChop mod, cartoon wounds and severed limbs
 commands:
   chopchop:
     description: Manage ChopChop
-    usage: /chopchop <reload|stats|heal [player]>
-    permission: chopchop.admin
+    usage: /chopchop <reload|stats|heal [player]|sever <player> <part|legs> [along]>
 permissions:
   chopchop.admin:
     description: Use /chopchop
+    default: op
+  chopchop.sever:
+    description: Cut a part off a player with /chopchop sever
     default: op
