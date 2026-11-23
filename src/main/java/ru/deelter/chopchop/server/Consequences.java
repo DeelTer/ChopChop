@@ -58,11 +58,19 @@ final class Consequences {
 	public static void finish(LivingEntity entity, ServerLevel level, DamageSource source) {
 		finishing = true;
 		try {
-			if (!entity.hurtServer(level, source, Float.MAX_VALUE) && entity.isAlive()) entity.kill(level);
+			entity.hurtServer(level, source, Float.MAX_VALUE);
 		} finally {
 			finishing = false;
 		}
-		if (entity.isAlive()) entity.kill(level);
+		spared(entity);
+	}
+
+	/**
+	 * The mod's killing blow did not kill: another mod took the death (a minigame that has none, a totem). It is not
+	 * forced: the body is made whole again, as the death it would have been is not.
+	 */
+	private static void spared(LivingEntity entity) {
+		if (entity.isAlive() && entity.getHealth() > 0) ChopServer.heal(entity);
 	}
 
 	/**
@@ -150,10 +158,11 @@ final class Consequences {
 				// the mod's own finishing blow: no new wounds from it, it is not a blow anyone struck
 				finishing = true;
 				try {
-					if (!entity.hurtServer(level, h.source, Float.MAX_VALUE) && entity.isAlive()) entity.kill(level);
+					entity.hurtServer(level, h.source, Float.MAX_VALUE);
 				} finally {
 					finishing = false;
 				}
+				spared(entity);
 			}
 		}
 	}

@@ -106,9 +106,10 @@ public final class WoundRules {
 	private boolean decapitationKills = true;
 	private double headlessSeconds = 3.0;
 	/**
-	 * a player without a head stands this long before falling: long enough to watch it from the flying head
+	 * a player without a head stands this long before falling; at once by default: a death that comes seconds
+	 * late, the death screen with it, gets in the way of a game (the head cam shows the flying head all the same)
 	 */
-	private double headlessPlayerSeconds = 2.0;
+	private double headlessPlayerSeconds = 0;
 	/**
 	 * What happens when the last leg would come off: "crawl" (it comes off, the body drops and crawls),
 	 * "protect" (the last leg never comes off), "none" (it comes off and nothing else happens)

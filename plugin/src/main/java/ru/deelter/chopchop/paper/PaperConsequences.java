@@ -109,7 +109,9 @@ final class PaperConsequences {
 					} finally {
 						finishing = false;
 					}
-					if (!entity.isDead()) entity.setHealth(0);
+					// still alive: another plugin took the death (a minigame that has none, a totem). It is not forced:
+					// the body is made whole again, as the death it would have been is not
+					if (!entity.isDead() && plugin instanceof ChopPlugin chop) chop.healApi(entity);
 				}
 			}.runTaskTimer(plugin, 1, 1);
 		}
